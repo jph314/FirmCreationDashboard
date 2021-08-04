@@ -1,3 +1,3 @@
-[submodule "WPEcon"]
-   path = data/UKpc2NUTS
+[submodule "UKpc2NUTS"]
+   path = UKpc2NUTS
    url = https://github.com/ygalanak/UKpc2NUTS/tree/main/output
