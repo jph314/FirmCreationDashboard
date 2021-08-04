@@ -46,7 +46,7 @@ register$SIC5dg1 <- as.integer(register$SIC5dg1)
 register$Class   <- as.integer(register$Class)
 convert <- read.csv('C:/Users/ygala/Dropbox-UKC/Dropbox/FirmsCovid_YG/ReportMarch2021/data/sic2007conversion.csv')
 convert <- convert[-c(1)]
-# add abbreviation of section names as in https://www.hithorizons.com/uk/companies/stats-and-charts
+# add abbreviation 
 abbreviation <- read.csv("data/SectionAbbreviation.csv")
 convert <- merge(convert, abbreviation, by="Section")
 convert1<-convert[-c(9:10)]
