@@ -1,3 +1,10 @@
+# ---
+# Get and clean data for the app
+# Yannis Galanakis; <i.galanakis@kent.ac.uk>
+# Mar 2021
+#---
+
+# Packages ----
 packages <- c('tidyverse', 'naniar', 'haven', 'survey',
               'data.table', 'lubridate', 'ggalt', 'cowplot','animation',
               'patchwork', 'sp', 'scales', 'raster', 'rgeos', 'mapproj',
@@ -10,6 +17,7 @@ if (!require(gpclib)) install.packages("gpclib", type="source");library(gpclib)
 gpclibPermit()  # Gives maptool permisssion to use gpclib
 load.fontawesome()
 
+# Download data ----
 # Create a temp. file
 temp <- tempfile()
 # Use `download.file()` to fetch the file into the temp. file
@@ -51,13 +59,13 @@ register <- register %>%
 write.csv(register, "data/registerSectorsUK.csv", row.names=F)
 
 # make one file with PC, Areas, Country
-areaPC <- read.csv("C:/Users/ygala/Dropbox-UKC/Dropbox/FirmsCovid_YG/ReportMarch2021/data/Postcodes summaryCLEAN.csv")
+areaPC <- read.csv("data/Postcodes summaryCLEAN.csv")
 # add countries
-postcod2country <- read.csv("C:/Users/ygala/Dropbox-UKC/Dropbox/FirmsCovid_YG/ReportMarch2021/data/convertedPC2country.csv")
+postcod2country <- read.csv("data/convertedPC2country.csv")
 postcod2country <- postcod2country[-c(1)]
 postcod2country <- postcod2country %>% rename (PostcodeArea= Postcode.area)
 PCcountryArea <- merge(areaPC[ , c("PostcodeArea","Area.covered")],postcod2country,by = "PostcodeArea")
-PC2regions <- read_csv("C:/Users/ygala/Dropbox-UKC/Dropbox/FirmsCovid_YG/UKmapPC/PostcodeArea2Regions.csv")
+PC2regions <- read_csv("data/PostcodeArea2Regions.csv")
 PCcountryArea <- merge(PCcountryArea, PC2regions, by="PostcodeArea")
 #save it
 write.csv(PCcountryArea, "data/regionsUK.csv", row.names = F)
@@ -75,66 +83,3 @@ write.csv(registerPC, "data/registerSectorsRegionsUK.csv", row.names = F)
 
 library(fst)
 write_fst(registerPC, "data/registerSectorsRegionsUK.fst", 100)
-
-## Aggregate
-n_incorp <- f %>%
-  group_by(IncorporationDate) %>%
-  count()
-
-f<-Total192021[which(Total192021$IncorporationDate >= "2020-07-01" &
-                       Total192021$IncorporationDate <= "2020-11-01"), ]
-
-aggregate(n_incorp$n, by=list(IncorporationDate=n_incorp$IncorporationDate), FUN=sum)
-
-#rolling avgs
-RollAvgs <-n_incorp
-RollAvgs$av3 <- frollmean(RollAvgs$n, n=3)
-RollAvgs$av7 <- frollmean(RollAvgs$n, n=7)
-
-
-# AGGREGATE STATS MAP
-n_iPC <- registerPC %>%
-  group_by(postcode) %>%
-  count()
-
-
-pc2nuts <- read.csv("C:/Users/ygala/Dropbox-UKC/Dropbox/postcodes2NUTS/output/UKpc2NUTS.csv")
-pc2nuts <- pc2nuts %>% rename(postcode = postcodeUnit)
-pcReg <- pc2nuts %>%
-  left_join(n_iPC, by = c("postcode"))
-pcReg <- pcReg %>% distinct(postcode, .keep_all = TRUE)
-
-#measure by nuts2
-n_pcReg <- pcReg %>%
-  group_by(NUTS218CD) %>%
-  summarise(n = sum(n, na.rm=TRUE))
-n_pcReg <- n_pcReg %>% left_join(pc2nuts, by = c("NUTS218CD"))
-n_pcReg <- n_pcReg %>% distinct(NUTS218CD, .keep_all = TRUE)
-
-#https://geoportal.statistics.gov.uk/search?collection=Dataset&sort=name&tags=all(PRD_ONSPD%2CFEB_2021)
-postcodes <- read.csv("data/ukpostcodes.csv")
-postcodes <- postcodes[-c(1)]
-leaflet(postcodes) %>% addCircles(lng = ~longitude, lat = ~latitude)
-
-
-
-
-
-# sectoral
-sectorsIwant <- c(11:15,293)
-Tfirmsfilt2 <- registerPC[which(registerPC$Group %in% sectorsIwant),]
-
-n_incorp <- Tfirmsfilt2 %>%
-  group_by(IncorporationDate, Group) %>%
-  count()
-
-n_incorp$av7 <- frollmean(n_incorp$n, n=7)
-
-n_incorp <- left_join(n_incorp,convert,by="Group")
-# Remove duplicates based on week columns
-n_incorp <- n_incorp %>%
-  distinct(IncorporationDate, Group, .keep_all = TRUE)
-
-sec <- unique(n_incorp$Section)
-
-plot_ly(x=n_incorp$IncorporationDate, y= n_incorp$av7, linetype = n_incorp$Group.name, mode = 'lines')
