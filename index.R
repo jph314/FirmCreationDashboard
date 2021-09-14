@@ -3,6 +3,7 @@
 library(lubridate)
 library(dplyr)
 library(data.table)
+library(DT)
 library(shiny)
 library(fresh)
 library(dashboardthemes)
