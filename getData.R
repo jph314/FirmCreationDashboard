@@ -2,21 +2,18 @@
 # Create a temp. file.
 temp <- tempfile()
 # Use `download.file()` to fetch the file into the temp. file.
-download.file("http://download.companieshouse.gov.uk/BasicCompanyDataAsOneFile-2021-08-01.zip",temp)
+download.file("http://download.companieshouse.gov.uk/BasicCompanyDataAsOneFile-2021-09-01.zip",temp)
 # Use unz() to extract the target file from temp. file.
-repD <- fread(unz(temp, "BasicCompanyDataAsOneFile-2021-08-01.csv"))
+repD <- read_csv(unz(temp, "BasicCompanyDataAsOneFile-2021-09-01.csv"))
 # Remove the temp file via 'unlink()'
 unlink(temp)
 # Make incorporation date as date format.
 repD <- repD %>% rename(date=IncorporationDate)
 repD$date <- as.Date(repD$date, "%d/%m/%Y")
-# Keep records since 2019.
-Total192021 <- repD[which(repD$date >= "2019-01-01" &
-                            repD$date <= "2021-07-31"), ]
 ### Make usable dataframe for the app.
 # Delete unnecessary columns.
 register <- repD[which(repD$date >= "2019-01-01" &
-                            repD$date <= "2021-07-31"), c(2,10,15,27)]
+                            repD$date <= "2021-08-31"), c(2,10,15,27)]
 
 # SIC codes ----
 # Keep only the code from SIC.
