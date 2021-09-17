@@ -5,13 +5,15 @@ Dashboard App linked to the [UK COVID-19 Firm Creation project](https://www.ukfi
 Download data from Companies House and prepare it for use.
 ## ui.R
 User interface.
-## server.R
+## functions.R
 Functions to render valueboxes, plots and tables.
+## server.R
+Populate the UI by calling functions.
 ## www/
 Contains logo, home information and dashboard theme.
 ## data/
 Contains conversion files for data preparation and shapefile for map.
-## index.R
+## app.R
 Runs the app.
 
 ## Contact 
