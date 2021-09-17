@@ -21,10 +21,8 @@ ui <- fluidPage(
                     menuItem("Home", tabName = "home", icon = icon("home")),
                     menuItem("Aggregate Analysis", tabName = "AggStats", icon = icon("bullseye")),
                     #     menuItem("Regional Analysis", icon = icon("flag"), tabName = "country"),
-                    menuItem("Sectoral Analysis", icon = icon("industry"), tabName = "industries" #,
-                            # menuSubItem("Group(s) per Country", tabName = "industries"),
-                            # menuSubItem("Group by Country", tabName = "industryCountries")
-                    )
+                    menuItem("Sectoral Analysis", icon = icon("industry"), tabName = "industries"),
+                    menuItem("Regional comparison", icon = icon("layer-group"), tabName = "regions")
                     
                     #     menuItem("Raw Data", icon = icon("database"), tabName="rawdata")
                   ),
@@ -153,7 +151,39 @@ ui <- fluidPage(
                                     plotlyOutput("sectorsPlot") %>% withSpinner(color ="#4C566A")
                                 )
                               )
-                      ) #Industries
+                      ), #Industries
+                      tabItem(tabName = "regions",
+                              h2("Regional comparison by Sector/Group"),
+                              offset=0, style='padding:3px;',
+                              fluidRow(
+                                # Select industry group
+                                pickerInput(
+                                  inputId = "groupPicker2",
+                                  label = "Choose industry group:",
+                                  choices = sort(unique(registerPC$Group)),
+                                  choicesOpt = list(
+                                    subtext = unique(registerPC$Group.name)[order(unique(registerPC$Group))]
+                                  ),
+                                  selected = 11,
+                                  multiple = FALSE,
+                                  options = list(
+                                    `live-search`= TRUE,
+                                    size = 7
+                                    #             `action-box` = TRUE
+                                  )
+                                )
+                              ),
+                              fluidRow(
+                                box(width = NULL, align="center", height = 'auto',
+                                    status = "primary", solidHeader = FALSE,
+                                    plotlyOutput("groupsRegion") %>% withSpinner(color ="#4C566A")
+                                ),
+                                box(width = NULL, align="center", height = 'auto',
+                                    status = "primary", solidHeader = FALSE,
+                                    plotlyOutput("sectorsRegion") %>% withSpinner(color ="#4C566A")
+                                )
+                              )
+                      ) #Regions
                     ) #Tabs
 
                 ) #Body
