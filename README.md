@@ -1,13 +1,13 @@
 # FirmCreationDashboard
 Dashboard App linked to the [UK COVID-19 Firm Creation project](https://www.ukfirmcreation.com/)
 
-## getData.R
+## UKFirmCreation_getData.R
 Download data from Companies House and prepare it for use.
-## ui.R
+## UKFirmCreation_ui.R
 User interface.
-## functions.R
+## UKFirmCreation_functions.R
 Functions to render valueboxes, plots and tables.
-## server.R
+## UKFirmCreation_server.R
 Populate the UI by calling functions.
 ## www/
 Contains logo, home information and dashboard theme.
