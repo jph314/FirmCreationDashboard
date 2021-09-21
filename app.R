@@ -24,19 +24,19 @@ library(sf)
 library(markdown)
 
 # Functions
-source("functions.R")
+source("UKFirmCreation_functions.R")
 
 # Data
-source("getData.R")
+source("UKFirmCreation_getData.R")
 
 # Theme
 source("www/UKFirmCreationTheme.R")
 
 # UI
-source("ui.R")
+source("UKFirmCreation_ui.R")
 
 # Server
-source("server.R")
+source("UKFirmCreation_server.R")
 
 # Run the application ----
 shinyApp(ui = ui, server = server)
