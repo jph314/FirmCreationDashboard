@@ -1,3 +1,11 @@
+#---
+# Shiny App for UK COVID-19 Firm Creation
+# Link to project's website:
+# Yannis Galanakis; <i.galanakis@kent.ac.uk>
+# Jonathan Hobbs; <jph37@kent.ac.uk>
+# February 2021
+#---
+
 # Libraries
 # library(tidyverse)
 library(lubridate)
@@ -13,6 +21,7 @@ library(shinydashboard)
 library(shinycssloaders)
 library(plotly)
 library(sf)
+library(markdown)
 
 # Functions
 source("functions.R")
