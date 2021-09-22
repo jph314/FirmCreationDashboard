@@ -36,8 +36,10 @@ server <- function(input, output) {
                  notificationItem(icon = icon("user"), status = "info",
                                   "Miguel León-Ledesma", href = 'https://sites.google.com/site/miguelleonledesmaspernonalsite/Home'),
                  notificationItem(icon = icon("user"), status = "info",
-                                  "Anthony Savagar", href= 'https://www.asavagar.com/'
-                 ))
+                                  "Anthony Savagar", href= 'https://www.asavagar.com/'),
+                 notificationItem(icon = icon("user"), status = "info",
+                                  "Jonathan Hobbs")
+    )
   }) #authors
   
   # Daily registrations per NUTS1 region for entire dataset, to be further filtered and aggregated below.
@@ -74,13 +76,16 @@ server <- function(input, output) {
     showMap(input$dateAgg[1], input$dateAgg[2])   
   })
   
+  Tdivision <- reactive(
+    # Aggregate registrations by SIC Division in selected date range and regions from full dataset.
+    registerPC[which(between(registerPC$date, input$dateAgg[1], input$dateAgg[2]) & 
+                       registerPC$NUTS1 %in% countrySel()),] %>% 
+      group_by(SectionAbb, Division.name) %>% count()
+  )
   ### Sector tree map
   sunburstDF <- reactive({
     as.sunburstDF(
-      # Aggregate registrations by SIC Division in selected date range and regions from full dataset.
-      registerPC[which(between(registerPC$date, input$dateAgg[1], input$dateAgg[2]) & 
-                         registerPC$NUTS1 %in% countrySel()),] %>% 
-      group_by(SectionAbb, Division.name) %>% count(),
+      Tdivision(),
       valueCol = "n"
     )
   })
@@ -88,6 +93,11 @@ server <- function(input, output) {
   output$treemap <- renderPlotly({
     drawTreemap(sunburstDF(), input$dateAgg[1], input$dateAgg[2])
   }) #Treemap
+  
+  # Sector donut plot
+  output$donut <- renderPlotly({
+    drawDonut(Tdivision(), input$dateAgg[1], input$dateAgg[2])
+  }) #Donut
   
   ### Industry divisions plots
   # Count daily registrations per SIC Group in selected date range, regions and SIC Group.

@@ -22,14 +22,14 @@ ui <- fluidPage(
                     menuItem("Aggregate Analysis", tabName = "AggStats", icon = icon("bullseye")),
                     #     menuItem("Regional Analysis", icon = icon("flag"), tabName = "country"),
                     menuItem("Sectoral Analysis", icon = icon("industry"), tabName = "industries"),
-                    menuItem("Regional comparison", icon = icon("layer-group"), tabName = "regions")
+                    menuItem("Regional comparison", icon = icon("earth-europa"), tabName = "regions")
                     
                     #     menuItem("Raw Data", icon = icon("database"), tabName="rawdata")
                   ),
                   ### date select
                   dateRangeInput(inputId = "dateAgg",
                                  label = "Choose date range:",
-                                 start = as.Date("2021-01-01"),
+                                 start = as.Date("2020-01-01"),
                                  end = as.Date(max(registerPC$date)),
                                  min = as.Date("2020-01-01"),
                                  max = as.Date(max(registerPC$date))+30,
@@ -74,7 +74,7 @@ ui <- fluidPage(
                   ))),
                   tags$script(HTML('
       $(document).ready(function() {
-        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> August 3, 2021 </span>\');
+        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> 14 September, 2021 </span>\');
       })'
                   )),
 
@@ -108,6 +108,10 @@ ui <- fluidPage(
                                      )
                               ),
                               fluidRow(
+                                     box(width = NULL, align="center", height = 'auto',
+                                         status = "primary", solidHeader = FALSE,
+                                         plotlyOutput("donut", height='400px') %>% withSpinner(color ="#4C566A")
+                                     ), 
                                      box(width = NULL, align="center", height = 'auto',
                                          status = "primary", solidHeader = FALSE,
                                          plotlyOutput("treemap", height='500px') %>% withSpinner(color ="#4C566A")

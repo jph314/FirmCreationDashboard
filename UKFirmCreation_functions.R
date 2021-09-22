@@ -56,6 +56,11 @@ dailyPlot <- function(d1, d2, country, Tcountry) {
     aggregate(by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2021-01-05"), as.Date("2021-04-12")))]),
               sum)
   medianLD3 <- median(ld3Data$x)
+  # Data for relevant regions during 2019.
+  data2019 <- Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2019-01-01"), as.Date("2019-12-31")))] %>%
+    aggregate(by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2019-01-01"), as.Date("2019-12-31")))]),
+              sum)
+  median2019 <- median(data2019$x)
   # Plot rolling average/daily registrations, with or without lockdown periods.
   plot_ly() %>% add_trace(x=raData$date, y=(frollmean(raData$n, n=7)), name="7-day rolling average", 
                           type='scatter', mode='lines', showlegend=FALSE, visible=TRUE) %>%
@@ -65,6 +70,8 @@ dailyPlot <- function(d1, d2, country, Tcountry) {
                  y = median(raData$n), yend = median(raData$n), name = "Median; selected period", showlegend=T) %>%
     add_segments(x = min(raData$date), xend = max(raData$date), 
                  y = medianLD3, yend = medianLD3, name = "Median; Lockdown 3", showlegend=T) %>%
+    add_segments(x = min(raData$date), xend = max(raData$date), 
+                 y = median2019, yend = median2019, name = "Median; 2019", showlegend=T) %>%
     layout(title = paste0('Daily company registrations',
                           '<br>',
                           '<sup>',
@@ -75,24 +82,24 @@ dailyPlot <- function(d1, d2, country, Tcountry) {
            updatemenus = list(
              list(type = "dropdown", y = 0.95, x = 1.25, direction = "down", buttons=list(
                list(label = "Rolling average", method = "update",
-                    args = list(list(visible = c(TRUE, FALSE, TRUE, TRUE)))),
+                    args = list(list(visible = c(TRUE, FALSE, TRUE, TRUE, TRUE)))),
                list(label = "Daily total", method = "update",
-                    args = list(list(visible = c(FALSE, TRUE, TRUE, TRUE))))
+                    args = list(list(visible = c(FALSE, TRUE, TRUE, TRUE, TRUE))))
              )),
              list(type = "dropdown", y = 0.75, x = 1.25, active=1, direction = "down", buttons=list(
                list(label = "Show lockdowns", method = "relayout", args = list(list(
                  shapes = list(list(type = "rect",
                                     fillcolor = "gray", line = list(color = "gray"), opacity = 0.2,
                                     x0 = "2020-03-23", x1 = "2020-07-04", xref = "x",
-                                    y0 = 0, y1 = 3100, yref = "y"),
+                                    y0 = 0, y1 = 4000, yref = "y"),
                                list(type = "rect",
                                     fillcolor = "gray", line = list(color = "gray"), opacity = 0.2,
                                     x0 = "2020-11-05", x1 = "2020-12-02", xref = "x",
-                                    y0 = 0, y1 = 3100, yref = "y"),
+                                    y0 = 0, y1 = 4000, yref = "y"),
                                list(type = "rect",
                                     fillcolor = "gray", line = list(color = "gray"), opacity = 0.2,
                                     x0 = "2021-01-05", x1 = "2021-04-12", xref = "x",
-                                    y0 = 0, y1 = 3100, yref = "y"))
+                                    y0 = 0, y1 = 4000, yref = "y"))
                ))),
                list(label = "Hide lockdowns", method = "relayout", args = list(list(shapes = c())))
              ))
@@ -129,28 +136,22 @@ showMap <- function(d1, d2) {
 # Use the function as.sunburstDF from https://stackoverflow.com/a/58481176/4874341
 as.sunburstDF <- function(DF, valueCol = NULL){
   require(data.table)
-  
   colNamesDF <- names(DF)
-  
   if(is.data.table(DF)){
     DT <- copy(DF)
   } else {
     DT <- data.table(DF, stringsAsFactors = FALSE)
   }
-  
   DT[, root := "Total"]
   colNamesDT <- names(DT)
-  
   if(is.null(valueCol)){
     setcolorder(DT, c("root", colNamesDF))
   } else {
     setnames(DT, valueCol, "values", skip_absent=TRUE)
     setcolorder(DT, c("root", setdiff(colNamesDF, valueCol), "values"))
   }
-  
   hierarchyCols <- setdiff(colNamesDT, "values")
   hierarchyList <- list()
-  
   for(i in seq_along(hierarchyCols)){
     currentCols <- colNamesDT[1:i]
     if(is.null(valueCol)){
@@ -161,9 +162,7 @@ as.sunburstDF <- function(DF, valueCol = NULL){
     setnames(currentDT, length(currentCols), "labels")
     hierarchyList[[i]] <- currentDT
   }
-  
   hierarchyDT <- rbindlist(hierarchyList, use.names = TRUE, fill = TRUE)
-  
   parentCols <- setdiff(names(hierarchyDT), c("labels", "values", valueCol))
   hierarchyDT[, parents := apply(.SD, 1, function(x){fifelse(all(is.na(x)), yes = NA_character_, no = paste(x[!is.na(x)], sep = ":", collapse = " - "))}), .SDcols = parentCols]
   hierarchyDT[, ids := apply(.SD, 1, function(x){paste(x[!is.na(x)], collapse = " - ")}), .SDcols = c("parents", "labels")]
@@ -183,10 +182,18 @@ drawTreemap <- function(df, d1, d2) {
     title = paste0('Distribution of new registrations by SIC codes',
                    '<br>',
                    '<sup>',
-                   'For registrations between ', d1, ' and ', d2,
+                   'between ', d1, ' and ', d2,
                    '</sup>'),
     uniformtext=list(minsize=10)
   )
+}
+
+# Donut plot
+drawDonut <- function (df, d1, d2) {
+  Tsection <- df$n %>% aggregate(by = list(df$SectionAbb), sum) %>% rename(SectionAbb = Group.1, n = x)
+  plot_ly(data = Tsection, labels = ~SectionAbb, values = ~n) %>%
+    add_pie(hole = 0.6) %>%
+    layout(title = paste0('New registrations by sector between ', d1, ' and ', d2))
 }
 
 # Groups table
@@ -260,11 +267,12 @@ sectorPlot <- function(d1, d2, section, country) {
 groupRegion <- function(d1, d2, group, a) {
   # Daily totals for the selected dates and group for each NUTS1 region.
   if (a == 1) {
+    groupName <- registerPC$Group.name[which(registerPC$Group == group)][1]
     df <- registerPC[which(between(registerPC$date, d1, d2) & 
                            registerPC$Group == group),] %>%
     group_by(date, NUTS1) %>% count() %>% ungroup() %>% 
     group_by(NUTS1) %>% mutate(avg = frollmean(n, n=7))
-    title <- paste0("Daily registrations by region in group ", group)
+    title <- paste0("Daily registrations by region in ", groupName)
   } else if (a == 2) {
     section <- registerPC$SectionAbb[which(registerPC$Group == group)][1]
     df <- registerPC[which(between(registerPC$date, d1, d2) & 
