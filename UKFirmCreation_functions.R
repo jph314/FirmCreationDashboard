@@ -46,7 +46,7 @@ vboxes <- function(vb, d1, d2, country, Tcountry) {
 }
 
 # Daily registrations plot
-dailyPlot <- function(d1, d2, country, Tcountry) {
+dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
   # Sum data for each day in relevant regions and date range.
   raData <- Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))] %>%
     aggregate(by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))]),
@@ -57,15 +57,29 @@ dailyPlot <- function(d1, d2, country, Tcountry) {
               sum)
   medianLD3 <- median(ld3Data$x)
   # Data for relevant regions during 2019.
-  data2019 <- Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2019-01-01"), as.Date("2019-12-31")))] %>%
-    aggregate(by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2019-01-01"), as.Date("2019-12-31")))]),
-              sum)
-  median2019 <- median(data2019$x)
+  # data2019 <- Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2019-01-01"), as.Date("2019-12-31")))] %>%
+  #   aggregate(by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2019-01-01"), as.Date("2019-12-31")))]),
+  #             sum)
+  # median2019 <- median(data2019$x)
+  # Saved values from archive data for greater accuracy.
+  archive <- daily2019$n[which(daily2019$NUTS1 %in% country)] %>%
+    aggregate(by = list(date = daily2019$date[which(daily2019$NUTS1 %in% country)]),
+              sum) %>%
+    rename(n = x)
+  archiveMedians <- tibble(Region = c("UK", "Eng", "Lon", "Eng2", "Sco", "Wal", "NI"),
+                               Median = c(2414.5, 2192.5, 777, 1421, 124, 68, 32))
+  median2019 <- archiveMedians$Median[[which(archiveMedians$Region == pickCountry)]]
   # Plot rolling average/daily registrations, with or without lockdown periods.
   plot_ly() %>% add_trace(x=raData$date, y=(frollmean(raData$n, n=7)), name="7-day rolling average", 
                           type='scatter', mode='lines', showlegend=FALSE, visible=TRUE) %>%
+    add_trace(x=(archive$date+365), y=(frollmean(archive$n, n=7)), name="2019; 7-day RA", 
+              type='scatter', mode='lines', showlegend=TRUE, visible=TRUE,
+              line=list(dash = "dash", width = 0.5)) %>%
     add_trace(x=raData$date, y=raData$n, name="daily total", 
               type='bar', showlegend=FALSE, visible=FALSE) %>%
+    add_trace(x=(archive$date+365), y=archive$n, name="2019; daily", 
+              type='scatter', mode='lines', showlegend=TRUE, visible=FALSE,
+              line=list(dash = "dash", width = 0.5)) %>%
     add_segments(x = d1, xend = d2, 
                  y = median(raData$n), yend = median(raData$n), name = "Median; selected period", showlegend=T) %>%
     add_segments(x = min(raData$date), xend = max(raData$date), 
@@ -82,9 +96,9 @@ dailyPlot <- function(d1, d2, country, Tcountry) {
            updatemenus = list(
              list(type = "dropdown", y = 0.95, x = 1.25, direction = "down", buttons=list(
                list(label = "Rolling average", method = "update",
-                    args = list(list(visible = c(TRUE, FALSE, TRUE, TRUE, TRUE)))),
+                    args = list(list(visible = c(TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE)))),
                list(label = "Daily total", method = "update",
-                    args = list(list(visible = c(FALSE, TRUE, TRUE, TRUE, TRUE))))
+                    args = list(list(visible = c(FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE))))
              )),
              list(type = "dropdown", y = 0.75, x = 1.25, active=1, direction = "down", buttons=list(
                list(label = "Show lockdowns", method = "relayout", args = list(list(
@@ -338,3 +352,14 @@ groupRegion <- function(d1, d2, group, a) {
              ))),
            legend = list(x = 1, y = 0.8))
 }
+
+# Download data
+downloadData <- function(name, output) {
+  downloadHandler(
+  filename = function() {
+    name
+  },
+  content = function(file) {
+    write.csv(output, file, row.names = FALSE)
+  }
+)}

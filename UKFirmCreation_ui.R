@@ -22,7 +22,7 @@ ui <- fluidPage(
                     menuItem("Aggregate Analysis", tabName = "AggStats", icon = icon("bullseye")),
                     #     menuItem("Regional Analysis", icon = icon("flag"), tabName = "country"),
                     menuItem("Sectoral Analysis", icon = icon("industry"), tabName = "industries"),
-                    menuItem("Regional comparison", icon = icon("earth-europa"), tabName = "regions")
+                    menuItem("Regional comparison", icon = icon("map-marker-alt"), tabName = "regions")
                     
                     #     menuItem("Raw Data", icon = icon("database"), tabName="rawdata")
                   ),
@@ -98,13 +98,15 @@ ui <- fluidPage(
                               fluidRow(
                                      box(width = NULL, align="center", height = 'auto',
                                          status = "primary", solidHeader = FALSE,
-                                         plotlyOutput("rollingAvg", height='300px') %>% withSpinner(color ="#4C566A")
+                                         plotlyOutput("rollingAvg", height='300px') %>% withSpinner(color ="#4C566A"),
+                                         downloadButton("dailyRegDownload", "Download data")
                                      )
                               ),
                               fluidRow(
                                      box(width = NULL, align="center", height = 'auto',
                                          status = "primary", solidHeader = FALSE,
-                                         plotlyOutput("UKmap", height='600px') %>% withSpinner(color ="#4C566A")
+                                         plotlyOutput("UKmap", height='600px') %>% withSpinner(color ="#4C566A"),
+                                         downloadButton("NUTS2Download", "Download data")
                                      )
                               ),
                               fluidRow(
@@ -114,7 +116,8 @@ ui <- fluidPage(
                                      ), 
                                      box(width = NULL, align="center", height = 'auto',
                                          status = "primary", solidHeader = FALSE,
-                                         plotlyOutput("treemap", height='500px') %>% withSpinner(color ="#4C566A")
+                                         plotlyOutput("treemap", height='500px') %>% withSpinner(color ="#4C566A"),
+                                         downloadButton("sectorDownload", "Download data")
                                      )
                               )
                               

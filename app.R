@@ -22,6 +22,7 @@ library(shinycssloaders)
 library(plotly)
 library(sf)
 library(markdown)
+# library(downloadthis)
 
 # Functions
 source("UKFirmCreation_functions.R")

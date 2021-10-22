@@ -42,6 +42,10 @@ server <- function(input, output) {
     )
   }) #authors
   
+  # Load data.
+  registerPC <- fread("data/registerSectorsRegionsUK.csv")
+  daily2019 <- fread("data/Daily2019.csv")
+  
   # Daily registrations per NUTS1 region for entire dataset, to be further filtered and aggregated below.
   Tcountry <- registerPC %>% group_by(NUTS1, date) %>% count() %>% as.data.table()
   
@@ -68,13 +72,23 @@ server <- function(input, output) {
   
   ### Daily registrations plot
   output$rollingAvg <- renderPlotly({
-    dailyPlot(input$dateAgg[1], input$dateAgg[2], countrySel(), Tcountry)
+    dailyPlot(input$dateAgg[1], input$dateAgg[2], countrySel(), Tcountry, input$pickCountry)
   }) #Daily plot
+  
+  # Download data
+  output$dailyRegDownload <- downloadData(paste0("Daily_Registrations_",input$dateAgg[1], "-", input$dateAgg[2], "_", input$pickCountry, ".csv"),
+                                          Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))] %>%
+                                            aggregate(by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))]),
+                                                      sum) %>% rename(n = x))
   
   ### UK NUTS2 map
   output$UKmap <- renderPlotly({
     showMap(input$dateAgg[1], input$dateAgg[2])   
   })
+  
+  # Download data
+  output$NUTS2Download <- downloadData(paste0("Total_registrations_by_region_",input$dateAgg[1], "-", input$dateAgg[2], ".csv"),
+                                       registerPC[which(between(registerPC$date, d1, d2)),] %>% group_by(NUTS2) %>% count())
   
   Tdivision <- reactive(
     # Aggregate registrations by SIC Division in selected date range and regions from full dataset.
@@ -99,6 +113,10 @@ server <- function(input, output) {
     drawDonut(Tdivision(), input$dateAgg[1], input$dateAgg[2])
   }) #Donut
   
+  #Download data
+  output$sectorDownload <- downloadData(paste0("Total_registrations_by_sector_",input$dateAgg[1], "-", input$dateAgg[2], "_", input$pickCountry, ".csv"),
+                                        Tdivision())
+  
   ### Industry divisions plots
   # Count daily registrations per SIC Group in selected date range, regions and SIC Group.
   Tgrp <- reactive(registerPC[which(between(registerPC$date, input$dateAgg[1], input$dateAgg[2]) & 
@@ -117,6 +135,16 @@ server <- function(input, output) {
   output$groupsPlot <- renderPlotly({
     groupPlot(Tgrp())
   }) #Groups plot
+  # Download data
+  # output$groupsDownload <- downloadHandler(
+  #   filename = function() {
+  #     paste0("Daily_registrations_by_group_",input$dateAgg[1], "-", input$dateAgg[2], "_", input$pickCountry, ".csv")
+  #   },
+  #   content = function(file) {
+  #     write.csv(Tgrp(),
+  #               file, row.names = FALSE)
+  #   }
+  # )
   # Industry sectors plot
   output$sectorsPlot <- renderPlotly({
     sectorPlot(input$dateAgg[1], input$dateAgg[2], secTable()$Section, countrySel())
