@@ -2,7 +2,7 @@
 # # Create a temp. file.
 # temp <- tempfile()
 # # Use `download.file()` to fetch the file into the temp. file.
-# download.file("http://download.companieshouse.gov.uk/BasicCompanyDataAsOneFile-2021-09-01.zip",temp)
+# download.file("http://download.companieshouse.gov.uk/BasicCompanyDataAsOneFile-2022-01-01.zip",temp)
 # # Unzip and read csv file.
 # repD <- vroom(temp)
 # # Remove the temp file via 'unlink()'
@@ -13,7 +13,7 @@
 # ### Make usable dataframe for the app.
 # # Delete unnecessary columns.
 # register <- repD[which(repD$date >= "2019-01-01" &
-#                             repD$date <= "2021-08-31"), c(2,10,15,27)]
+#                             repD$date <= "2021-12-31"), c(2,10,15,27)]
 # 
 # # SIC codes ----
 # # Keep only the code from SIC.
@@ -33,6 +33,8 @@
 # registerPC <- merge(register, pcd2NUTS, by="postcodeDistrict")
 # #Save full register ready for use.
 # fwrite(registerPC, "data/registerSectorsRegionsUK.csv", row.names = F)
+# # save as RDS for smaller file
+# saveRDS(registerPC, "data/registerSectorsRegionsUK.rds")
 
-registerPC <- fread("data/registerSectorsRegionsUK.csv")
+registerPC <- readRDS("data/registerSectorsRegionsUK.rds")
 daily2019 <- fread("data/Daily2019.csv")

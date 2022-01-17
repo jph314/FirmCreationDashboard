@@ -1,54 +1,51 @@
 # SERVER ----
 server <- function(input, output) {
   # Info
-  output$info <-renderMenu({
-    dropdownMenu(type = "messages",
-                 icon = icon("info"), badgeStatus = "primary",
-                 headerText = tags$b("Project ID"),
-                 messageItem(
-                   from = "University of Kent",
-                   message = "School of Economics",
-                   icon = icon("institution"),
-                 ),
-                 messageItem(
-                   from = "ESRC-funded project",
-                   message = "2020-2022",
-                   icon = icon("pound-sign"),
-                 ),
-                 messageItem(
-                   from = "Contact",
-                   message = "Yannis Galanakis",
-                   href = "mailto:i.galanakis@kent.ac.uk",
-                   icon = icon("envelope"),
-                 )
+  output$info <- renderMenu({
+    dropdownMenu(
+      type = "messages",
+      icon = icon("info"), badgeStatus = "primary",
+      headerText = tags$b("Project ID"),
+      messageItem(
+        from = "ESRC-funded project",
+        message = "2020-2022",
+        icon = icon("pound-sign"),
+      ),
+      messageItem(
+        from = "Contact",
+        message = "Yannis Galanakis",
+        href = "mailto:i.galanakis@kent.ac.uk",
+        icon = icon("envelope"),
+      )
     )
-  }) #info
-  
+  }) # info
+
   # Authors
-  output$authors<-renderMenu({
-    dropdownMenu(type = "notifications", icon = icon("users"), badgeStatus = "primary",
-                 headerText = tags$b("Team"),
-                 notificationItem(icon = icon("user"), status = "info",
-                                  "Alfred Duncan",
-                                  href = 'https://www.alfredduncan.co.uk/'),
-                 notificationItem(icon = icon("user"), status = "info",
-                                  "Yannis Galanakis", href = 'https://ygalanak.github.io/'),
-                 notificationItem(icon = icon("user"), status = "info",
-                                  "Miguel León-Ledesma", href = 'https://sites.google.com/site/miguelleonledesmaspernonalsite/Home'),
-                 notificationItem(icon = icon("user"), status = "info",
-                                  "Anthony Savagar", href= 'https://www.asavagar.com/'),
-                 notificationItem(icon = icon("user"), status = "info",
-                                  "Jonathan Hobbs")
+  output$authors <- renderMenu({
+    dropdownMenu(
+      type = "notifications", icon = icon("users"), badgeStatus = "primary",
+      headerText = tags$b("Team"),
+      notificationItem(
+        icon = icon("user"), status = "info",
+        "Yannis Galanakis", href = "https://www.yannisgalanakis.com/"
+      ),
+      notificationItem(
+        icon = icon("user"), status = "info",
+        "Jonathan Hobbs"
+      ),
+      notificationItem(
+        icon = icon("user"), status = "info",
+        "Anthony Savagar", href = "https://www.asavagar.com/"
+      )
     )
-  }) #authors
-  
-  # Load data.
-  registerPC <- fread("data/registerSectorsRegionsUK.csv")
-  daily2019 <- fread("data/Daily2019.csv")
-  
+  }) # authors
+
   # Daily registrations per NUTS1 region for entire dataset, to be further filtered and aggregated below.
-  Tcountry <- registerPC %>% group_by(NUTS1, date) %>% count() %>% as.data.table()
-  
+  Tcountry <- registerPC %>%
+    group_by(NUTS1, date) %>%
+    count() %>%
+    as.data.table()
+
   ## AGGREGATE STATS ====
   # Select NUTS1 regions according to country/region selected by user.
   countrySel <- reactive({
@@ -68,33 +65,40 @@ server <- function(input, output) {
   )
   output$vboxOpen <- renderValueBox(
     vboxes(4, as.Date("2021-04-12"), input$dateAgg[2], countrySel(), Tcountry)
-  ) #VBoxes
-  
+  ) # VBoxes
+
   ### Daily registrations plot
   output$rollingAvg <- renderPlotly({
     dailyPlot(input$dateAgg[1], input$dateAgg[2], countrySel(), Tcountry, input$pickCountry)
-  }) #Daily plot
-  
-  # Download data
-  output$dailyRegDownload <- downloadData(paste0("Daily_Registrations_",input$dateAgg[1], "-", input$dateAgg[2], "_", input$pickCountry, ".csv"),
-                                          Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))] %>%
-                                            aggregate(by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))]),
-                                                      sum) %>% rename(n = x))
-  
+  }) # Daily plot
+
+  # # Download data
+  # output$dailyRegDownload <- downloadData(
+  #   paste0("Daily_Registrations_", input$dateAgg[1], "-", input$dateAgg[2], "_", input$pickCountry, ".csv"),
+  #   Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))] %>%
+  #     aggregate(
+  #       by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))]),
+  #       sum
+  #     ) %>% rename(n = x)
+  # )
+
   ### UK NUTS2 map
   output$UKmap <- renderPlotly({
-    showMap(input$dateAgg[1], input$dateAgg[2])   
-  })
-  
-  # Download data
-  output$NUTS2Download <- downloadData(paste0("Total_registrations_by_region_",input$dateAgg[1], "-", input$dateAgg[2], ".csv"),
-                                       registerPC[which(between(registerPC$date, d1, d2)),] %>% group_by(NUTS2) %>% count())
-  
+    showMap(input$dateAgg[1], input$dateAgg[2])
+  }) # UK NUTS2 map
+
+  # # Download data
+  # output$NUTS2Download <- downloadData(
+  #   paste0("Total_registrations_by_region_", input$dateAgg[1], "-", input$dateAgg[2], ".csv"),
+  #   registerPC[which(between(registerPC$date, d1, d2)), ] %>% group_by(NUTS2) %>% count()
+  # )
+
   Tdivision <- reactive(
     # Aggregate registrations by SIC Division in selected date range and regions from full dataset.
-    registerPC[which(between(registerPC$date, input$dateAgg[1], input$dateAgg[2]) & 
-                       registerPC$NUTS1 %in% countrySel()),] %>% 
-      group_by(SectionAbb, Division.name) %>% count()
+    registerPC[which(between(registerPC$date, input$dateAgg[1], input$dateAgg[2]) &
+      registerPC$NUTS1 %in% countrySel()), ] %>%
+      group_by(SectionAbb, Division.name) %>%
+      count()
   )
   ### Sector tree map
   sunburstDF <- reactive({
@@ -103,38 +107,40 @@ server <- function(input, output) {
       valueCol = "n"
     )
   })
-  #Draw treemap.
+  # Draw treemap.
   output$treemap <- renderPlotly({
     drawTreemap(sunburstDF(), input$dateAgg[1], input$dateAgg[2])
-  }) #Treemap
-  
+  }) # Treemap
+
   # Sector donut plot
   output$donut <- renderPlotly({
     drawDonut(Tdivision(), input$dateAgg[1], input$dateAgg[2])
-  }) #Donut
-  
-  #Download data
-  output$sectorDownload <- downloadData(paste0("Total_registrations_by_sector_",input$dateAgg[1], "-", input$dateAgg[2], "_", input$pickCountry, ".csv"),
-                                        Tdivision())
-  
+  }) # Donut
+
+  # # Download data
+  # output$sectorDownload <- downloadData(
+  #   paste0("Total_registrations_by_sector_", input$dateAgg[1], "-", input$dateAgg[2], "_", input$pickCountry, ".csv"),
+  #   Tdivision()
+  # )
+
   ### Industry divisions plots
   # Count daily registrations per SIC Group in selected date range, regions and SIC Group.
-  Tgrp <- reactive(registerPC[which(between(registerPC$date, input$dateAgg[1], input$dateAgg[2]) & 
-                                      registerPC$Group %in% input$groupPicker & 
-                                      registerPC$NUTS1 %in% countrySel()),] %>%
-                     group_by(date, Group, Group.name, Section, Section.name) %>% 
-                     count() %>% ungroup() %>% 
-                     #Add rolling average for each Group.
-                     group_by(Group) %>% mutate(avg = frollmean(n, n=7)))
+  Tgrp <- reactive(registerPC[which(between(registerPC$date, input$dateAgg[1], input$dateAgg[2]) &
+    registerPC$Group %in% input$groupPicker &
+    registerPC$NUTS1 %in% countrySel()), ] %>%
+    group_by(date, Group, Group.name, Section, Section.name) %>%
+    count() %>% ungroup() %>%
+    # Add rolling average for each Group.
+    group_by(Group) %>% mutate(avg = frollmean(n, n = 7)))
   # Selected Groups in a table.
-  secTable <- reactive(distinct(Tgrp()[-c(1,6,7)], Group, .keep_all = TRUE))
+  secTable <- reactive(distinct(Tgrp()[-c(1, 6, 7)], Group, .keep_all = TRUE))
   output$groups <- renderDT({
     showTable(secTable())
-  }) #Groups table
+  }) # Groups table
   # Industry groups plot
   output$groupsPlot <- renderPlotly({
     groupPlot(Tgrp())
-  }) #Groups plot
+  }) # Groups plot
   # Download data
   # output$groupsDownload <- downloadHandler(
   #   filename = function() {
@@ -148,17 +154,16 @@ server <- function(input, output) {
   # Industry sectors plot
   output$sectorsPlot <- renderPlotly({
     sectorPlot(input$dateAgg[1], input$dateAgg[2], secTable()$Section, countrySel())
-  }) #Sectors plot
-  #Industry plots
-  
+  }) # Sectors plot
+  # Industry plots
+
   ### Regional comparison plots by division
   # Selected group plot.
   output$groupsRegion <- renderPlotly({
     groupRegion(input$dateAgg[1], input$dateAgg[2], input$groupPicker2, 1)
-  }) #Group plot
+  }) # Group plot
   # Selected sector plot.
   output$sectorsRegion <- renderPlotly({
     groupRegion(input$dateAgg[1], input$dateAgg[2], input$groupPicker2, 2)
-  }) #Sector plot
-  
-} #Server
+  }) # Sector plot
+} # Server
