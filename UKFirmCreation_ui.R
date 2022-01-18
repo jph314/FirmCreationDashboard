@@ -117,7 +117,7 @@ ui <- fluidPage(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
               plotlyOutput("rollingAvg", height = "300px") %>% withSpinner(color = "#4C566A"),
-          #    downloadButton("dailyRegDownload", "Download data")
+              downloadButton("dailyRegDownload", "Download data as .csv")
             )
           ),
           fluidRow(
@@ -132,13 +132,13 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("donut", height = "400px") %>% withSpinner(color = "#4C566A")
+              plotlyOutput("donut", height = "400px") %>% withSpinner(color = "#4C566A"),
+              downloadButton("SectorDown", "Download data as .csv")
             ),
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("treemap", height = "500px") %>% withSpinner(color = "#4C566A"),
-           #   downloadButton("sectorDownload", "Download data")
+              plotlyOutput("treemap", height = "500px") %>% withSpinner(color = "#4C566A")
             )
           )
         ), # AggStats

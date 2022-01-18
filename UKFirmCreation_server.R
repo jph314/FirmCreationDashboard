@@ -72,15 +72,13 @@ server <- function(input, output) {
     dailyPlot(input$dateAgg[1], input$dateAgg[2], countrySel(), Tcountry, input$pickCountry)
   }) # Daily plot
 
-  # # Download data
-  # output$dailyRegDownload <- downloadData(
-  #   paste0("Daily_Registrations_", input$dateAgg[1], "-", input$dateAgg[2], "_", input$pickCountry, ".csv"),
-  #   Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))] %>%
-  #     aggregate(
-  #       by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))]),
-  #       sum
-  #     ) %>% rename(n = x)
-  # )
+  # Download data
+  output$dailyRegDownload <- downloadHandler(
+    filename = function(){paste0("Daily_Registrations_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")}, 
+    content = function(fname){
+      write.csv(dailyData(input$dateAgg[1], input$dateAgg[2], countrySel(), Tcountry, input$pickCountry), fname, row.names=F)
+    }
+  )
 
   ### UK NUTS2 map
   output$UKmap <- renderPlotly({
@@ -117,11 +115,15 @@ server <- function(input, output) {
     drawDonut(Tdivision(), input$dateAgg[1], input$dateAgg[2])
   }) # Donut
 
-  # # Download data
-  # output$sectorDownload <- downloadData(
-  #   paste0("Total_registrations_by_sector_", input$dateAgg[1], "-", input$dateAgg[2], "_", input$pickCountry, ".csv"),
-  #   Tdivision()
-  # )
+  # Download data from treemap
+  output$SectorDown <- downloadHandler(
+    filename = function(){"Registrations_bySector.csv"}, 
+    content = function(file){
+      write.csv(donutData(input$dateAgg[1], input$dateAgg[2], countrySel(), Tcountry, input$pickCountry), file, row.names = F)
+    }
+  ) # download data of treemap
+  
+  
 
   ### Industry divisions plots
   # Count daily registrations per SIC Group in selected date range, regions and SIC Group.

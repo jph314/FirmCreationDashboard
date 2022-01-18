@@ -164,6 +164,29 @@ dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
     )
 }
 
+# Daily registrations data from plot to export as downloadable .csv
+dailyData <-  function(d1, d2, country, Tcountry, pickCountry) {
+  # Sum data for each day in relevant regions and date range.
+  raData <- Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))] %>%
+    aggregate(
+      by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))]),
+      sum
+    ) %>%
+    rename(n = x)
+  raData$rollingAverage <- frollmean(raData$n, n = 7)
+  # Saved values from archive data for greater accuracy.
+  archive <- daily2019$n[which(daily2019$NUTS1 %in% country)] %>%
+    aggregate(
+      by = list(date = daily2019$date[which(daily2019$NUTS1 %in% country)]),
+      sum
+    ) %>%
+    rename(n = x)
+  archive$rollingAverage <- frollmean(archive$n, n = 7)
+  # append raData and archive
+  data <- rbind(archive, raData)
+}
+  
+  
 # UK NUTS2 map
 showMap <- function(d1, d2) {
   # Load shapefile.
@@ -264,6 +287,14 @@ drawDonut <- function(df, d1, d2) {
   plot_ly(data = Tsection, labels = ~SectionAbb, values = ~n) %>%
     add_pie(hole = 0.6) %>%
     layout(title = paste0("New registrations by sector between ", d1, " and ", d2))
+}
+
+# donut data
+donutData <- function(d1, d2, country, Tdivision, pickCountry) {
+  data <- registerPC[which(between(registerPC$date, input$dateAgg[1], input$dateAgg[2]) &
+                             registerPC$NUTS1 %in% countrySel()), ] %>%
+    group_by(SectionAbb, Division.name) %>%
+    count() %>% as.data.table()
 }
 
 # Groups table
