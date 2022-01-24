@@ -115,7 +115,7 @@ dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
     ) %>%
     layout(
       title = paste0(
-        "Daily company registrations in ", pickCountry,
+        "Daily company registrations",
         "<br>",
         "<sup>",
         "between ", d1, " and ", d2,
@@ -203,7 +203,7 @@ showMap <- function(d1, d2) {
     add_sf(
       color = ~ n^0.6,
       colors = mapcolour,
-      split = ~nuts218nm,
+      split = ~nuts218cd,
       text = ~ paste0(nuts218nm, "<br>", n, " new registrations"),
       line = list(width = 0.9, color = "#4C566A"),
       showlegend = FALSE,
@@ -212,9 +212,15 @@ showMap <- function(d1, d2) {
     ) %>%
     layout() %>%
     colorbar(title = paste0("New registrations between<br>", d1, " and ", d2), 
-             len = 0.5, x = 0.7, y = 0.65, 
-             showticklabels = FALSE)
+             len = 0.5, x = 0.7, y = 0.65)
 }
+
+NUTSdata <- function(d1, d2) {
+  # Aggregate registrations by NUTS2 in selected date range from full dataset.
+  TNUTS <- registerPC[which(between(registerPC$date, d1, d2)), ] %>%
+    group_by(NUTS218NM) %>%
+    count()
+} # NUTS data
 
 # Sector tree map
 # Use the function as.sunburstDF from https://stackoverflow.com/a/58481176/4874341
@@ -289,12 +295,10 @@ drawDonut <- function(df, d1, d2) {
     layout(title = paste0("New registrations by sector between ", d1, " and ", d2))
 }
 
-# donut data
-donutData <- function(d1, d2, country, Tdivision, pickCountry) {
-  data <- registerPC[which(between(registerPC$date, input$dateAgg[1], input$dateAgg[2]) &
-                             registerPC$NUTS1 %in% countrySel()), ] %>%
-    group_by(SectionAbb, Division.name) %>%
-    count() %>% as.data.table()
+donutData <- function(df, d1, d2) {
+  Tsection <- df$n %>%
+    aggregate(by = list(df$SectionAbb), sum) %>%
+    rename(SectionAbb = Group.1, n = x)
 }
 
 # Groups table

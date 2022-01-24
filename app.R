@@ -22,16 +22,15 @@ library(shinycssloaders)
 library(plotly)
 library(sf)
 library(markdown)
-# library(downloadthis)
+
+# Theme
+source("www/UKFirmCreationTheme.R")
 
 # Functions
 source("UKFirmCreation_functions.R")
 
 # Data
 source("UKFirmCreation_getData.R")
-
-# Theme
-source("www/UKFirmCreationTheme.R")
 
 # UI
 source("UKFirmCreation_ui.R")

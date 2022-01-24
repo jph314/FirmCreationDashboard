@@ -5,7 +5,17 @@ ui <- fluidPage(
     title = "UK COVID-19 Firm Creation Dashboard",
     dashboardHeader(
       # Header
-      title = "Dashboard",
+      title = shinyDashboardLogoDIY(
+        
+        boldText = "Dashboard"
+        ,mainText = "App"
+        ,textSize = 16
+        ,badgeText = "beta"
+        ,badgeTextColor = "white"
+        ,badgeTextSize = 2
+        ,badgeBackColor = "#5e81ac"
+        ,badgeBorderRadius = 3
+      ),
       tags$li(a(
         href = "https://www.ukfirmcreation.com/",
         img(
@@ -125,7 +135,7 @@ ui <- fluidPage(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
               plotlyOutput("UKmap", height = "600px") %>% withSpinner(color = "#4C566A"),
-          #    downloadButton("NUTS2Download", "Download data")
+              downloadButton("NUTS2Download", "Download data")
             )
           ),
           fluidRow(
@@ -138,7 +148,8 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("treemap", height = "500px") %>% withSpinner(color = "#4C566A")
+              plotlyOutput("treemap", height = "500px") %>% withSpinner(color = "#4C566A"),
+              downloadButton("DivisionDownload", "Download data as .csv")
             )
           )
         ), # AggStats

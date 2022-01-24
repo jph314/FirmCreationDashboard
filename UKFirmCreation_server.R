@@ -85,11 +85,13 @@ server <- function(input, output) {
     showMap(input$dateAgg[1], input$dateAgg[2])
   }) # UK NUTS2 map
 
-  # # Download data
-  # output$NUTS2Download <- downloadData(
-  #   paste0("Total_registrations_by_region_", input$dateAgg[1], "-", input$dateAgg[2], ".csv"),
-  #   registerPC[which(between(registerPC$date, d1, d2)), ] %>% group_by(NUTS2) %>% count()
-  # )
+  # Download data
+  output$NUTS2Download <- downloadHandler(
+    filename = function(){paste0("Total_Registrations_byRegion_", input$dateAgg[1], "--", input$dateAgg[2],".csv")}, 
+    content = function(fname){
+      write.csv(NUTSdata(input$dateAgg[1], input$dateAgg[2]), fname, row.names=F)
+    }
+  )
 
   Tdivision <- reactive(
     # Aggregate registrations by SIC Division in selected date range and regions from full dataset.
@@ -115,13 +117,20 @@ server <- function(input, output) {
     drawDonut(Tdivision(), input$dateAgg[1], input$dateAgg[2])
   }) # Donut
 
-  # Download data from treemap
+  # Download data from donut
   output$SectorDown <- downloadHandler(
-    filename = function(){"Registrations_bySector.csv"}, 
+    filename = function(){paste0("Registrations_bySector_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")}, 
     content = function(file){
-      write.csv(donutData(input$dateAgg[1], input$dateAgg[2], countrySel(), Tcountry, input$pickCountry), file, row.names = F)
+      write.csv(donutData(Tdivision(), input$dateAgg[1], input$dateAgg[2]), file, row.names = F)
     }
-  ) # download data of treemap
+  ) # download data of donut
+  
+  output$DivisionDownload <-downloadHandler(
+    filename = function(){paste0("Registrations_byDivisionSector_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")}, 
+    content = function(file){
+      write.csv(Tdivision(), file, row.names = F)
+    }
+  )
   
   
 
