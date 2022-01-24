@@ -1,6 +1,9 @@
 # FirmCreationDashboard
 Dashboard App linked to the [UK COVID-19 Firm Creation project](https://www.ukfirmcreation.com/)
 
+## App Accessible
+To access the dashboard app, click [here](https://asavagar.shinyapps.io/UKFirmCreation/)
+
 # Files Description
 - `UKFirmCreation_getData.R`: Download data from Companies House and prepare it for use.
 - `UKFirmCreation_ui.R`: User interface.
