@@ -16,5 +16,9 @@ To access the dashboard app, click [here](https://asavagar.shinyapps.io/UKFirmCr
 # Authors
 Yannis Galanakis; Jonathan Hobbs, Anthony Savagar
 
+## Cite the repository
+If you use this software, please cite as follows:
+> Galanakis, Y., Hobbs, J., & Savagar, A. (2022). UK Firm Creation: Dashboard App [Computer software]. https://github.com/asavagar/FirmCreationDashboard
+
 ## Contact 
 Reach out for comments and feedback, [here](https://www.ukfirmcreation.com/contact/).
