@@ -1,10 +1,10 @@
-# FirmCreationDashboard
+# UK Firm Creation Dashboard
 Dashboard App linked to the [UK COVID-19 Firm Creation project](https://www.ukfirmcreation.com/)
 
 ## App Accessible
 To access the dashboard app, click [here](https://asavagar.shinyapps.io/UKFirmCreation/)
 
-# Files Description
+## Files Description
 - `UKFirmCreation_getData.R`: Download data from Companies House and prepare it for use.
 - `UKFirmCreation_ui.R`: User interface.
 - `UKFirmCreation_functions.R`: Functions to render valueboxes, plots and tables.
@@ -13,10 +13,10 @@ To access the dashboard app, click [here](https://asavagar.shinyapps.io/UKFirmCr
 - `data/`: Contains conversion files for data preparation and shapefile for map.
 - `app.R`: Runs the app.
 
-# Authors
+## Authors
 Yannis Galanakis; Jonathan Hobbs, Anthony Savagar
 
-## Cite the repository
+### Cite the repository
 If you use this software, please cite as follows:
 > Galanakis, Y., Hobbs, J., & Savagar, A. (2022). UK Firm Creation: Dashboard App [Computer software]. https://github.com/asavagar/FirmCreationDashboard
 
