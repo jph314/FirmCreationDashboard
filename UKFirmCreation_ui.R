@@ -56,15 +56,15 @@ ui <- fluidPage(
         inputId = "pickCountry",
         label = "Choose region:",
         choices = c(
-          "United Kingdom" = "UK",
-          "England" = "Eng",
-          "London" = "Lon",
-          "England excl. London" = "Eng2",
-          "Scotland" = "Sco",
-          "Wales" = "Wal",
-          "Northern Ireland" = "NI"
+          "United Kingdom",
+          "England",
+          "London",
+          "England excl. London",
+          "Scotland",
+          "Wales",
+          "Northern Ireland"
         ),
-        selected = "UK",
+        selected = "United Kingdom",
         multiple = FALSE
       )
     ), # End of sidebar
@@ -102,7 +102,7 @@ ui <- fluidPage(
         ## AGGREGATE STATS ====
         tabItem(
           tabName = "AggStats",
-          h2("Statistics of companies in the UK"), # width=12,
+          uiOutput("countryText"), # width=12,
           offset = 0, style = "padding:3px;",
           fluidRow(
             column(
@@ -185,12 +185,14 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("groupsPlot") %>% withSpinner(color = "#4C566A")
+              plotlyOutput("groupsPlot") %>% withSpinner(color = "#4C566A"),
+              downloadButton("groupsDownload", "Download data as .csv")
             ),
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("sectorsPlot") %>% withSpinner(color = "#4C566A")
+              plotlyOutput("sectorsPlot") %>% withSpinner(color = "#4C566A"),
+              downloadButton("sectorsDownload", "Download data as .csv")
             )
           )
         ), # Industries

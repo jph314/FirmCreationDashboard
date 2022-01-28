@@ -1,21 +1,21 @@
 # Select NUTS1 regions according to country/region selected by user.
 countrySelect <- function(pickCountry) {
-  if (pickCountry == "UK") {
+  if (pickCountry == "United Kingdom") {
     list(
       "UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKI", "UKJ", "UKK", "UKL",
       "UKM", "UKN"
     )
-  } else if (pickCountry == "Eng") {
+  } else if (pickCountry == "England") {
     list("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKI", "UKJ", "UKK")
-  } else if (pickCountry == "Lon") {
+  } else if (pickCountry == "London") {
     list("UKI")
-  } else if (pickCountry == "Eng2") {
+  } else if (pickCountry == "England excl. London") {
     list("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKJ", "UKK")
-  } else if (pickCountry == "Sco") {
+  } else if (pickCountry == "Scotland") {
     list("UKM")
-  } else if (pickCountry == "Wal") {
+  } else if (pickCountry == "Wales") {
     list("UKL")
-  } else if (pickCountry == "NI") {
+  } else if (pickCountry == "Northern Ireland") {
     list("UKN")
   }
 }
@@ -77,7 +77,7 @@ dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
     ) %>%
     rename(n = x)
   archiveMedians <- tibble(
-    Region = c("UK", "Eng", "Lon", "Eng2", "Sco", "Wal", "NI"),
+    Region = c("United Kingdom", "England", "London", "England excl. London", "Scotland", "Wales", "Northern Ireland"),
     Median = c(2414.5, 2192.5, 777, 1421, 124, 68, 32)
   )
   median2019 <- archiveMedians$Median[[which(archiveMedians$Region == pickCountry)]]
@@ -115,11 +115,12 @@ dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
     ) %>%
     layout(
       title = paste0(
-        "Daily company registrations",
-        "<br>",
-        "<sup>",
-        "between ", d1, " and ", d2,
-        "</sup>"
+        "Daily company registrations in ",
+        pickCountry #,
+        # "<br>",
+        # "<sup>",
+        # "between ", d1, " and ", d2,
+        # "</sup>"
       ),
       yaxis = list(title = "Number of registrations", showgrid = F, range = c(0, 1.1 * max(raData$n))),
       xaxis = list(range = c(d1, d2)),
@@ -191,7 +192,7 @@ dailyData <-  function(d1, d2, country, Tcountry, pickCountry) {
 showMap <- function(d1, d2) {
   # Load shapefile.
   # https://geoportal.statistics.gov.uk/datasets/nuts-level-2-january-2018-ultra-generalised-clipped-boundaries-in-the-united-kingdom/
-  mapNUTS <- st_read("data/map")
+  mapNUTS <- map0
   # Aggregate registrations by NUTS2 in selected date range from full dataset.
   TNUTS <- registerPC[which(between(registerPC$date, d1, d2)), ] %>%
     group_by(NUTS2) %>%
@@ -264,7 +265,8 @@ as.sunburstDF <- function(DF, valueCol = NULL) {
   return(hierarchyDT)
 }
 # Draw the treemap.
-drawTreemap <- function(df, d1, d2) {
+map0 <- st_read("data/map")
+drawTreemap <- function(df, d1, d2, pickCountry) {
   plot_ly(
     alpha = 0.5, data = df, ids = ~ids, labels = ~labels,
     parents = ~parents, values = ~values, type = "treemap",
@@ -279,6 +281,8 @@ drawTreemap <- function(df, d1, d2) {
       "<br>",
       "<sup>",
       "between ", d1, " and ", d2,
+      " in ",
+      pickCountry,
       "</sup>"
     ),
     uniformtext = list(minsize = 10)
@@ -286,13 +290,17 @@ drawTreemap <- function(df, d1, d2) {
 }
 
 # Donut plot
-drawDonut <- function(df, d1, d2) {
+drawDonut <- function(df, d1, d2, pickCountry) {
   Tsection <- df$n %>%
     aggregate(by = list(df$SectionAbb), sum) %>%
     rename(SectionAbb = Group.1, n = x)
   plot_ly(data = Tsection, labels = ~SectionAbb, values = ~n) %>%
     add_pie(hole = 0.6) %>%
-    layout(title = paste0("New registrations by sector between ", d1, " and ", d2))
+    layout(title = paste0(
+      "New registrations by sector between ", 
+      d1, " and ", d2,
+      " in ",
+      pickCountry))
 }
 
 donutData <- function(df, d1, d2) {
@@ -334,7 +342,7 @@ showTable <- function(tabledata) {
 }
 
 # Industry groups plot
-groupPlot <- function(df) {
+groupPlot <- function(df, pickCountry) {
   plot_ly(data = df) %>%
     add_trace(
       x = ~date, y = ~avg, color = ~Group.name, colors = "viridis",
@@ -347,7 +355,7 @@ groupPlot <- function(df) {
       line = list(width = 0.8)
     ) %>%
     layout(
-      title = "Daily registrations by industry group",
+      title = paste0("Daily registrations by industry group in ", pickCountry),
       yaxis = list(title = "Number of registrations"),
       xaxis = list(showgrid = FALSE, title = ""),
       updatemenus = list(
@@ -367,16 +375,16 @@ groupPlot <- function(df) {
 }
 
 # Industry sectors plot
-sectorPlot <- function(d1, d2, section, country) {
-  # Daily registrations per Section for selected regions, dates and distinct Sections from selected Groups.
-  df <- registerPC[which(between(registerPC$date, d1, d2) &
-    registerPC$Section %in% section &
-    registerPC$NUTS1 %in% country), ] %>%
-    group_by(date, Section, Section.name) %>%
-    count() %>%
-    ungroup() %>%
-    group_by(Section) %>%
-    mutate(avg = frollmean(n, n = 7))
+sectorPlot <- function(df, pickCountry) {
+  # # Daily registrations per Section for selected regions, dates and distinct Sections from selected Groups.
+  # df <- registerPC[which(between(registerPC$date, d1, d2) &
+  #   registerPC$Section %in% section &
+  #   registerPC$NUTS1 %in% country), ] %>%
+  #   group_by(date, Section, Section.name) %>%
+  #   count() %>%
+  #   ungroup() %>%
+  #   group_by(Section) %>%
+  #   mutate(avg = frollmean(n, n = 7))
 
   plot_ly(data = df) %>%
     add_trace(
@@ -390,7 +398,7 @@ sectorPlot <- function(d1, d2, section, country) {
       line = list(width = 0.8)
     ) %>%
     layout(
-      title = "Daily registrations by industry sector",
+      title = paste0("Daily registrations by industry sector in ", pickCountry),
       yaxis = list(title = "Number of registrations"),
       xaxis = list(showgrid = FALSE, title = ""),
       updatemenus = list(
