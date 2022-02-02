@@ -51,6 +51,9 @@ server <- function(input, output) {
   countrySel <- reactive({
     countrySelect(input$pickCountry)
   })
+  
+  # Modify text in headers depending on country/region.
+  output$countryText <- renderUI(h2(paste0("Statistics of companies in ",input$pickCountry)))
 
   ### Value boxes
   # Sum registrations according to selected NUTS1 regions and relevant date ranges.
@@ -109,12 +112,12 @@ server <- function(input, output) {
   })
   # Draw treemap.
   output$treemap <- renderPlotly({
-    drawTreemap(sunburstDF(), input$dateAgg[1], input$dateAgg[2])
+    drawTreemap(sunburstDF(), input$dateAgg[1], input$dateAgg[2], input$pickCountry)
   }) # Treemap
 
   # Sector donut plot
   output$donut <- renderPlotly({
-    drawDonut(Tdivision(), input$dateAgg[1], input$dateAgg[2])
+    drawDonut(Tdivision(), input$dateAgg[1], input$dateAgg[2], input$pickCountry)
   }) # Donut
 
   # Download data from donut
@@ -148,26 +151,41 @@ server <- function(input, output) {
   output$groups <- renderDT({
     showTable(secTable())
   }) # Groups table
+  
   # Industry groups plot
   output$groupsPlot <- renderPlotly({
-    groupPlot(Tgrp())
+    groupPlot(Tgrp(), input$pickCountry)
   }) # Groups plot
   # Download data
-  # output$groupsDownload <- downloadHandler(
-  #   filename = function() {
-  #     paste0("Daily_registrations_by_group_",input$dateAgg[1], "-", input$dateAgg[2], "_", input$pickCountry, ".csv")
-  #   },
-  #   content = function(file) {
-  #     write.csv(Tgrp(),
-  #               file, row.names = FALSE)
-  #   }
-  # )
+  output$groupsDownload <-downloadHandler(
+    filename = function(){paste0("Registrations_by_group_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")}, 
+    content = function(file){
+      write.csv(Tgrp(), file, row.names = F)
+    }
+  )
+  
+  # Daily registrations per Section for selected regions, dates and distinct Sections from selected Groups.
+  Tsec <- reactive(registerPC[which(between(registerPC$date, input$dateAgg[1], input$dateAgg[2]) &
+                                        registerPC$Section %in% secTable()$Section &
+                                        registerPC$NUTS1 %in% countrySel()), ] %>%
+                       group_by(date, Section, Section.name) %>%
+                       count() %>%
+                       ungroup() %>%
+                       group_by(Section) %>%
+                       mutate(avg = frollmean(n, n = 7)))
   # Industry sectors plot
   output$sectorsPlot <- renderPlotly({
-    sectorPlot(input$dateAgg[1], input$dateAgg[2], secTable()$Section, countrySel())
+    sectorPlot(Tsec(), input$pickCountry)
   }) # Sectors plot
-  # Industry plots
-
+  # Download data
+  output$sectorsDownload <-downloadHandler(
+    filename = function(){paste0("Registrations_by_sector_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")}, 
+    content = function(file){
+      write.csv(Tsec(), file, row.names = F)
+    }
+  )
+  # Industry plots  
+  
   ### Regional comparison plots by division
   # Selected group plot.
   output$groupsRegion <- renderPlotly({
