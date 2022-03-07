@@ -187,12 +187,51 @@ server <- function(input, output) {
   # Industry plots  
   
   ### Regional comparison plots by division
+  # Selected group data.
+  TregionGroup <- reactive(groupRegionData(input$dateAgg[1], input$dateAgg[2], input$groupPicker2, 1))
   # Selected group plot.
   output$groupsRegion <- renderPlotly({
-    groupRegion(input$dateAgg[1], input$dateAgg[2], input$groupPicker2, 1)
+    groupRegion(TregionGroup(), input$groupPicker2, 1)
   }) # Group plot
+  # Download data
+  output$regionGroupDownload <-downloadHandler(
+    filename = function(){paste0("Registrations_in_",input$groupPicker2,"_by_region_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")}, 
+    content = function(file){
+      write.csv(TregionGroup(), file, row.names = F)
+    }
+  )
+  
+  # Selected sector data.
+  TregionSector <- reactive(groupRegionData(input$dateAgg[1], input$dateAgg[2], input$groupPicker2, 2))
   # Selected sector plot.
   output$sectorsRegion <- renderPlotly({
-    groupRegion(input$dateAgg[1], input$dateAgg[2], input$groupPicker2, 2)
+    groupRegion(TregionSector(), input$groupPicker2, 2)
   }) # Sector plot
+  output$regionSectorDownload <-downloadHandler(
+    filename = function(){paste0("Registrations_in_",
+                                 registerPC$SectionAbb[which(registerPC$Group == input$groupPicker2)][1],
+                                 "_by_region_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")}, 
+    content = function(file){
+      write.csv(TregionSector(), file, row.names = F)
+    }
+  )
+  
+Tcustom <- registerPC %>%
+    group_by(date, Class, postcodeDistrict) %>%
+    count() %>%
+    as.data.table()
+  
+output$customdata  <- renderDT({
+    totalRegistrations(input$dateAgg[1], input$dateAgg[2], Tcustom, input$pickPostcode, input$pickSIC)
+  })
+
+# Download data
+output$customDownload <- downloadHandler(
+  filename = function(){paste0("Custom_Registrations_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")}, 
+  content = function(fname){
+    write.csv(customDataDownload(input$dateAgg[1], input$dateAgg[2], Tcustom, input$pickPostcode, input$pickSIC), 
+              fname, row.names=F)
+  }
+)
+
 } # Server

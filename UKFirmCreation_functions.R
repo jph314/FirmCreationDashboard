@@ -417,98 +417,62 @@ sectorPlot <- function(df, pickCountry) {
     )
 }
 
-groupRegion <- function(d1, d2, group, a) {
-  # Daily totals for the selected dates and group for each NUTS1 region.
-  if (a == 1) {
-    groupName <- registerPC$Group.name[which(registerPC$Group == group)][1]
+groupRegionData <- function(d1, d2, group, a) {
+  if (a==1) {
     df <- registerPC[which(between(registerPC$date, d1, d2) &
-      registerPC$Group == group), ] %>%
+                             registerPC$Group == group), ] %>%
       group_by(date, NUTS1) %>%
       count() %>%
       ungroup() %>%
       group_by(NUTS1) %>%
-      mutate(avg = frollmean(n, n = 7))
+      pivot_wider(id_cols=date, names_from=NUTS1, values_from=n)
+  } else {
+    section <- registerPC$SectionAbb[which(registerPC$Group == group)][1]
+    df <- registerPC[which(between(registerPC$date, d1, d2) &
+                             registerPC$SectionAbb == section), ] %>%
+      group_by(date, NUTS1) %>%
+      count() %>%
+      ungroup() %>%
+      group_by(NUTS1) %>%
+      pivot_wider(id_cols=date, names_from=NUTS1, values_from=n)
+  }
+  regions <- c("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKI", "UKJ", "UKK", "UKL", "UKM", "UKN")
+  df[setdiff(regions, names(df))] <- 0
+  df$Eng <- select(df, !(c(date, UKL, UKM, UKN))) %>% rowSums()
+  df$EngExLon <- df$Eng - df$UKI
+  df <- df %>% rename(Lon = UKI, Sco = UKM, Wal = UKL, NI = UKN) %>%
+    select(c(date, Eng, EngExLon, Lon, Sco, Wal, NI)) %>%
+    pivot_longer(!date, names_to="Region", values_to="n") #%>%
+  df <- merge(expand.grid(date=as_date(min(df$date):max(df$date)),Region=unique(df$Region)),
+               df, all=TRUE)
+  df$n <- replace_na(df$n,0)
+  df <- df %>% group_by(Region) %>%
+    mutate(avg = frollmean(n, n = 7))
+  df$Region <- mapvalues(df$Region, from=c("Eng", "EngExLon", "Lon", "Sco", "Wal", "NI"), 
+                         to=c("England", "England excl. London", "London", "Scotland", "Wales", "Northern Ireland"))
+  df
+}
+
+groupRegion <- function(data, group, a) {
+  # Set title.
+  if (a == 1) {
+    groupName <- registerPC$Group.name[which(registerPC$Group == group)][1]
     title <- paste0("Daily registrations by region in ", groupName)
   } else if (a == 2) {
     section <- registerPC$SectionAbb[which(registerPC$Group == group)][1]
-    df <- registerPC[which(between(registerPC$date, d1, d2) &
-      registerPC$SectionAbb == section), ] %>%
-      group_by(date, NUTS1) %>%
-      count() %>%
-      ungroup() %>%
-      group_by(NUTS1) %>%
-      mutate(avg = frollmean(n, n = 7))
     title <- paste0("Daily registrations by region in ", section)
   }
-  # Totals for England with/without London.
-  eng1 <- df$n[which(df$NUTS1 %in% list("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKI", "UKJ", "UKK"))] %>%
-    aggregate(by = list(date = df$date[which(df$NUTS1 %in% list("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKI", "UKJ", "UKK"))]), sum) %>%
-    rename(n = x) %>%
-    mutate(avg = frollmean(n, n = 7))
-  eng2 <- df$n[which(df$NUTS1 %in% list("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKJ", "UKK"))] %>%
-    aggregate(by = list(date = df$date[which(df$NUTS1 %in% list("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKJ", "UKK"))]), sum) %>%
-    rename(n = x) %>%
-    mutate(avg = frollmean(n, n = 7))
-  plot_ly() %>%
+  #Plot.
+  plot_ly(data = data) %>%
     add_trace(
-      x = eng1$date, y = eng1$avg, name = "England (inc. Lon)",
+      x = ~date, y = ~avg, color = ~Region, colors = "viridis",
       type = "scatter", mode = "lines", visible = TRUE,
-      line = list(width = 0.8, color = "#440154")
+      line = list(width = 0.8)
     ) %>%
     add_trace(
-      x = eng2$date, y = eng2$avg, name = "England (exc. Lon)",
-      type = "scatter", mode = "lines", visible = TRUE,
-      line = list(width = 0.8, color = "#414487")
-    ) %>%
-    add_trace(
-      data = df[which(df$NUTS1 == "UKI"), ], x = ~date, y = ~avg, name = "London",
-      type = "scatter", mode = "lines", visible = TRUE,
-      line = list(width = 0.8, color = "#2a788e")
-    ) %>%
-    add_trace(
-      data = df[which(df$NUTS1 == "UKM"), ], x = ~date, y = ~avg, name = "Scotland",
-      type = "scatter", mode = "lines", visible = TRUE,
-      line = list(width = 0.8, color = "#22a884")
-    ) %>%
-    add_trace(
-      data = df[which(df$NUTS1 == "UKL"), ], x = ~date, y = ~avg, name = "Wales",
-      type = "scatter", mode = "lines", visible = TRUE,
-      line = list(width = 0.8, color = "#7ad151")
-    ) %>%
-    add_trace(
-      data = df[which(df$NUTS1 == "UKN"), ], x = ~date, y = ~avg, name = "Northern Ireland",
-      type = "scatter", mode = "lines", visible = TRUE,
-      line = list(width = 0.8, color = "#fde725")
-    ) %>%
-    add_trace(
-      x = eng1$date, y = eng1$n, name = "England (inc. Lon)",
+      x = ~date, y = ~n, color = ~Region, colors = "viridis",
       type = "scatter", mode = "lines", visible = FALSE,
-      line = list(width = 0.8, color = "#440154")
-    ) %>%
-    add_trace(
-      x = eng2$date, y = eng2$n, name = "England (exc. Lon)",
-      type = "scatter", mode = "lines", visible = FALSE,
-      line = list(width = 0.8, color = "#414487")
-    ) %>%
-    add_trace(
-      data = df[which(df$NUTS1 == "UKI"), ], x = ~date, y = ~n, name = "London",
-      type = "scatter", mode = "lines", visible = FALSE,
-      line = list(width = 0.8, color = "#2a788e")
-    ) %>%
-    add_trace(
-      data = df[which(df$NUTS1 == "UKM"), ], x = ~date, y = ~n, name = "Scotland",
-      type = "scatter", mode = "lines", visible = FALSE,
-      line = list(width = 0.8, color = "#22a884")
-    ) %>%
-    add_trace(
-      data = df[which(df$NUTS1 == "UKL"), ], x = ~date, y = ~n, name = "Wales",
-      type = "scatter", mode = "lines", visible = FALSE,
-      line = list(width = 0.8, color = "#7ad151")
-    ) %>%
-    add_trace(
-      data = df[which(df$NUTS1 == "UKN"), ], x = ~date, y = ~n, name = "Northern Ireland",
-      type = "scatter", mode = "lines", visible = FALSE,
-      line = list(width = 0.8, color = "#fde725")
+      line = list(width = 0.8)
     ) %>%
     layout(
       title = title,
@@ -540,4 +504,72 @@ downloadData <- function(name, output) {
       write.csv(output, file, row.names = FALSE)
     }
   )
+}
+
+# Create Table by date, postcodes, 5-digit SIC, and number of registrations
+totalRegistrations <- function(d1, d2, Tcustom, pickPostcode, pickSIC){
+  dataCustom <- Tcustom$n[which(Tcustom$postcodeDistrict %in% pickPostcode & 
+                               between(Tcustom$date, d1, d2) &
+                               Tcustom$Class %in% pickSIC
+                             )] %>%
+    aggregate(
+      by = list(Date = Tcustom$date[which(Tcustom$postcodeDistrict %in% pickPostcode & 
+                                             between(Tcustom$date, d1, d2) &
+                                            Tcustom$Class %in% pickSIC)],
+                "Postcode district" = Tcustom$postcodeDistrict[which(Tcustom$postcodeDistrict %in% pickPostcode & 
+                                                        between(Tcustom$date, d1, d2) &
+                                                        Tcustom$Class %in% pickSIC)],
+                Class = Tcustom$Class[which(Tcustom$postcodeDistrict %in% pickPostcode & 
+                                             between(Tcustom$date, d1, d2) &
+                                             Tcustom$Class %in% pickSIC)]
+                ),
+      sum
+    ) %>%
+    rename(Registrations = x)
+  datatable(dataCustom,
+            rownames = F, #class = "",
+            extensions = 'Buttons',
+            options = list(
+              autoWidth = T, 
+              dom = 'Bfrtip', 
+              buttons = c('pageLength', 'copy', 'print'
+                          ),  
+              pagelength = 10, 
+              lengthMenu = list(c(10, 25, 100, -1), 
+                                c('10', '25', '100','All')),
+              columnDefs = list(
+                list(
+                  className = "dt-center",
+                  targets = "_all"
+                ),
+                list(
+                  width = "40px",
+                  target = "_all"
+                )
+              )
+            )
+  )
+}
+
+# download custom data
+customDataDownload <- function(d1, d2, Tcustom, pickPostcode, pickSIC){
+  dataCustom <- Tcustom$n[which(Tcustom$postcodeDistrict %in% pickPostcode & 
+                                  between(Tcustom$date, d1, d2) &
+                                  Tcustom$Class %in% pickSIC
+  )] %>%
+    aggregate(
+      by = list(Date = Tcustom$date[which(Tcustom$postcodeDistrict %in% pickPostcode & 
+                                            between(Tcustom$date, d1, d2) &
+                                            Tcustom$Class %in% pickSIC)],
+                "Postcode district" = Tcustom$postcodeDistrict[which(Tcustom$postcodeDistrict %in% pickPostcode & 
+                                                                       between(Tcustom$date, d1, d2) &
+                                                                       Tcustom$Class %in% pickSIC)],
+                Class = Tcustom$Class[which(Tcustom$postcodeDistrict %in% pickPostcode & 
+                                              between(Tcustom$date, d1, d2) &
+                                              Tcustom$Class %in% pickSIC)]
+      ),
+      sum
+    ) %>%
+    rename(Registrations = x)
+  
 }

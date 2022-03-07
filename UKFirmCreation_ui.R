@@ -37,7 +37,8 @@ ui <- fluidPage(
         menuItem("Aggregate Analysis", tabName = "AggStats", icon = icon("bullseye")),
         #     menuItem("Regional Analysis", icon = icon("flag"), tabName = "country"),
         menuItem("Sectoral Analysis", icon = icon("industry"), tabName = "industries"),
-        menuItem("Regional Analysis", icon = icon("map-marker-alt"), tabName = "regions")
+        menuItem("Regional Analysis", icon = icon("map-marker-alt"), tabName = "regions"),
+        menuItem("Get custom data", icon = icon("database"), tabName = "customData")
 
         #     menuItem("Raw Data", icon = icon("database"), tabName="rawdata")
       ),
@@ -92,7 +93,7 @@ ui <- fluidPage(
                                 }'))),
       tags$script(HTML('
       $(document).ready(function() {
-        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> January 1, 2022 </span>\');
+        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> March 1, 2022 </span>\');
       })')),
       tabItems(
         tabItem(
@@ -222,15 +223,71 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("groupsRegion") %>% withSpinner(color = "#4C566A")
+              plotlyOutput("groupsRegion") %>% withSpinner(color = "#4C566A"),
+              downloadButton("regionGroupDownload", "Download data as .csv")
             ),
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("sectorsRegion") %>% withSpinner(color = "#4C566A")
+              plotlyOutput("sectorsRegion") %>% withSpinner(color = "#4C566A"),
+              downloadButton("regionSectorDownload", "Download data as .csv")
             )
           )
-        ) # Regions
+        ), # Regions
+        ## Get custom data ----
+        tabItem(
+          tabName = "customData",
+          h2("Get custom data"),
+          h3("Select the date range, postcode(s) and SIC sectors"),
+          offset = 0, style = "padding:3px;",
+          fluidRow(
+            column(
+              width = 5, style = "padding:2px;", height = "auto",
+            # Select your postcode
+            pickerInput(
+              inputId = "pickPostcode",
+              label = "Choose postcode district:",
+              choices = sort(unique(registerPC$postcodeDistrict)),
+              #choicesOpt = list(
+              #  subtext = unique(registerPC$Group.name)[order(unique(registerPC$Group))]
+              #),
+              selected = "AB10",
+              multiple = TRUE,
+              options = list(
+                `actions-box` = TRUE,  # build buttons for collective selection
+                `live-search` = TRUE, 
+                size = 7
+              )
+            ),# picker postcode
+            ),
+            column(
+              width = 5, style = "padding:2px;", height = "auto",
+            # select 4-digit SIC code
+            pickerInput(
+              inputId = "pickSIC",
+              label = "Choose SIC Class:",
+              choices = sort(unique(registerPC$Class)),
+              choicesOpt = list(
+                subtext = unique(registerPC$Class.name)[order(unique(registerPC$Class))]
+              ),
+              selected = 150,
+              multiple = TRUE,
+              options = list(
+                `actions-box` = TRUE,  # build buttons for collective selection
+                `live-search` = TRUE,
+                size = 7
+                #             `action-box` = TRUE
+              )
+            )# picker SIC code
+          ) # box
+          ),
+          fluidRow(
+            column(12,
+                   dataTableOutput("customdata") %>% withSpinner(color = "#4C566A"),
+                   downloadButton("customDownload", "Download data as .csv")
+            )
+          )
+        ) # custom data
       ) # Tabs
     ) # Body
   ) # Page
