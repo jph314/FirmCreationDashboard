@@ -3,14 +3,16 @@
 # Link to project's website:
 # Yannis Galanakis; <i.galanakis@kent.ac.uk>
 # Jonathan Hobbs; <jph37@kent.ac.uk>
-# February 2021
+# May 2022
 #---
 
 # Libraries
 # library(tidyverse)
 library(lubridate)
 library(vroom)
+library(plyr)
 library(dplyr)
+library(tidyr)
 library(data.table)
 library(DT)
 library(shiny)
@@ -27,7 +29,7 @@ library(markdown)
 source("www/UKFirmCreationTheme.R")
 
 # Functions
-source("UKFirmCreation_functions.R")
+source("UKFirmCreation_functions2.R")
 
 # Data
 source("UKFirmCreation_getData.R")
