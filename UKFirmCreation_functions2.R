@@ -48,6 +48,13 @@ vboxes <- function(vb, d1, d2, country, Tcountry, pickData) {
   )
 }
 
+active <- function(data) {
+  valueBox(
+    value = prettyNum(sum(data$n), big.mark = ",", scientific = FALSE),
+    subtitle = "Total active firms", color = "red", icon = icon("store-alt")
+  )
+}
+
 # Daily registrations plot
 dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
   # Sum data for each day in relevant regions and date range.
@@ -81,6 +88,11 @@ dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
     Median = c(2414.5, 2192.5, 777, 1421, 124, 68, 32)
   )
   median2019 <- archiveMedians$Median[[which(archiveMedians$Region == pickCountry)]]
+  archiveExtend <- data.frame(date = seq(ymd("2019-01-01"),d2,"days"))
+  archiveExtend$yday <- yday(archiveExtend$date)
+  archive$yday <- yday(archive$date)
+  archive <- merge(archiveExtend, archive, by="yday") %>% rename(date=date.x)
+  archive <- archive[order(archive$date),]
   # Plot rolling average/daily registrations, with or without lockdown periods.
   plot_ly() %>%
     add_trace(
@@ -88,16 +100,16 @@ dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
       type = "scatter", mode = "lines", showlegend = FALSE, visible = TRUE
     ) %>%
     add_trace(
-      x = (archive$date + 365), y = (frollmean(archive$n, n = 7)), name = "2019; 7-day RA",
+      x = archive$date, y = (frollmean(archive$n, n = 7)), name = "2019; 7-day RA",
       type = "scatter", mode = "lines", showlegend = TRUE, visible = TRUE,
-      line = list(dash = "dash", width = 0.5)
+      line = list(dash = "dash", width = 0.9)
     ) %>%
     add_trace(
       x = raData$date, y = raData$n, name = "daily total",
-      type = "bar", showlegend = FALSE, visible = FALSE
+      type = "bar", showlegend = FALSE, visible = TRUE, opacity = 0.3
     ) %>%
     add_trace(
-      x = (archive$date + 365), y = archive$n, name = "2019; daily",
+      x = archive$date, y = archive$n, name = "2019; daily",
       type = "scatter", mode = "lines", showlegend = TRUE, visible = FALSE,
       line = list(dash = "dash", width = 0.5)
     ) %>%
@@ -649,7 +661,7 @@ dailyPlotDis <- function(d1, d2, country, TcountryDis, pickCountry) {
     # ) %>%
     add_trace(
       x = raData$date, y = raData$n, name = "daily total",
-      type = "bar", showlegend = FALSE, visible = FALSE
+      type = "bar", showlegend = FALSE, visible = TRUE, opacity = 0.3
     ) %>%
     add_segments(
       x = d1, xend = d2,
@@ -668,19 +680,9 @@ dailyPlotDis <- function(d1, d2, country, TcountryDis, pickCountry) {
         # "between ", d1, " and ", d2,
         # "</sup>"
       ),
-      yaxis = list(title = "Number of registrations", showgrid = F, range = c(0, 1.1 * max(raData$n))),
+      yaxis = list(title = "Number of dissolutions", showgrid = F, range = c(0, 1.1 * max(raData$n))),
       xaxis = list(range = c(d1, d2)),
       updatemenus = list(
-        list(type = "dropdown", y = 0.95, x = 1.25, direction = "down", buttons = list(
-          list(
-            label = "Rolling average", method = "update",
-            args = list(list(visible = c(TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE)))
-          ),
-          list(
-            label = "Daily total", method = "update",
-            args = list(list(visible = c(FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE)))
-          )
-        )),
         list(type = "dropdown", y = 0.75, x = 1.25, active = 1, direction = "down", buttons = list(
           list(label = "Show lockdowns", method = "relayout", args = list(list(
             shapes = list(

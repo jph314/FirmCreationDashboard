@@ -45,7 +45,7 @@ server <- function(input, output, session) {
   # 1. I create a reactive, register(), that contains the rows from registerPC
   #  that match the selected data
   register <- reactive({
-    registerPC[which(registerPC$archive == input$pickData), ]
+    register1[which(register1$archive == input$pickData), ]
   })
 
   # Daily registrations per NUTS1 region for entire dataset, to be further filtered and aggregated below.

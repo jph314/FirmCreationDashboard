@@ -14,7 +14,7 @@
 # # Delete unnecessary columns.
 # register <- repD[which(repD$date >= "2019-01-01" &
 #                             repD$date <= "2022-04-30"), c(2,10,15,27)]
-#
+# 
 # # SIC codes ----
 # # Keep only the code from SIC.
 # register$SIC5dg1 <- as.integer(gsub("([0-9]+).*$", "\\1", register$SICCode.SicText_1)) # pattern is by finding a set of numbers in the start and capturing them
@@ -23,7 +23,7 @@
 # # Read SIC conversion file and merge to obtain Section, Division, Group and Class.
 # convert1 <- fread("data/convertSIC.csv")
 # register <- merge(register, convert1, by="Class")
-#
+# 
 # # NUTS2 ----
 # #Keep only postcode district
 # register$postcodeDistrict <- gsub("[ .]", "", register$RegAddress.PostCode)
@@ -37,7 +37,7 @@
 # saveRDS(registerPC, "data/registerSectorsRegionsUK.rds")
 
 # Latest register ----
-registerPC <- readRDS("data/registerSectorsRegionsUK.rds")
+# registerPC <- readRDS("data/registerSectorsRegionsUK.rds")
 daily2019 <- fread("data/Daily2019.csv")
 
 # Archive data ----
@@ -56,17 +56,20 @@ daily2019 <- fread("data/Daily2019.csv")
 # archive <- archive %>% rename(date = IncorporationDate)
 # saveRDS(archive, "data/incorporations_archive_byMonthPostcodeSIC5_merged.rds")
 
-archive <- readRDS("data/incorporations_archive_byMonthPostcodeSIC5_merged.rds")
+# archive <- readRDS("data/incorporations_archive_byMonthPostcodeSIC5_merged.rds")
+# 
+# # harmonise the dataframes
+# registerPC$archive <- "Latest register"
+# archive$archive <- "Archive"
+# registerPC <- registerPC %>% rename(postcode = RegAddress.PostCode)
+# registerPC <- registerPC %>% rename(SIC5 = SIC5dg1)
+# registerPC <- registerPC %>% select(!SICCode.SicText_1)
+# archive <- archive %>% select(!postcode2)
+# registerPC <- rbind(registerPC, archive)
+# rm(archive)
 
-# harmonise the dataframes
-registerPC$archive <- "Latest register"
-archive$archive <- "Archive"
-registerPC <- registerPC %>% rename(postcode = RegAddress.PostCode)
-registerPC <- registerPC %>% rename(SIC5 = SIC5dg1)
-registerPC <- registerPC %>% select(!SICCode.SicText_1)
-archive <- archive %>% select(!postcode2)
-registerPC <- rbind(registerPC, archive)
-rm(archive)
+# Load pre-aggregated data
+register1 <- readRDS("data/registerAgg1.rds")
 
 # prepare dissolution data ----
 # dissolutions <- readRDS("data/dissolutions_snapshot.rds")
