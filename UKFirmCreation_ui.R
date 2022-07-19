@@ -66,10 +66,10 @@ ui <- fluidPage(
       dateRangeInput(
         inputId = "dateAgg",
         label = "Choose date range:",
-        start = as.Date("2020-01-01"),
-        end = as.Date(max(registerPC$date)),
-        min = as.Date("2020-01-01"),
-        max = as.Date(max(registerPC$date)) + 30,
+        start = startDate,
+        end = endDate,
+        min = startDate,
+        max = endDate + 30,
         startview = "month", weekstart = 0,
         language = "en", separator = " to ", width = "100%"
       ),
@@ -127,21 +127,21 @@ ui <- fluidPage(
           offset = 0, style = "padding:3px;",
           fluidRow(
             column(
-              width = 3, style = "padding:2px;", height = "auto",
+              width = 6, style = "padding:2px;", height = "auto",
               valueBoxOutput("vboxTotal", width = NULL)
             ),
             column(
-              width = 3, style = "padding:2px;", height = "auto",
-              valueBoxOutput("vboxVaccine", width = NULL)
-            ),
-            column(
-              width = 3, style = "padding:2px;", height = "auto",
-              valueBoxOutput("vboxLD", width = NULL)
-            ),
-            column(
-              width = 3, style = "padding:2px;", height = "auto",
-              valueBoxOutput("vboxOpen", width = NULL)
-            )
+              width = 6, style = "padding:2px;", height = "auto",
+              valueBoxOutput("vboxActive", width = NULL)
+            )#,
+            # column(
+            #   width = 3, style = "padding:2px;", height = "auto",
+            #   valueBoxOutput("vboxLD", width = NULL)
+            # ),
+            # column(
+            #   width = 3, style = "padding:2px;", height = "auto",
+            #   valueBoxOutput("vboxOpen", width = NULL)
+            # )
           ),
           fluidRow(
             box(
@@ -163,12 +163,6 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("donut", height = "400px") %>% withSpinner(color = "#4C566A"),
-              downloadButton("SectorDown", "Download data as .csv")
-            ),
-            box(
-              width = NULL, align = "center", height = "auto",
-              status = "primary", solidHeader = FALSE,
               plotlyOutput("treemap", height = "500px") %>% withSpinner(color = "#4C566A"),
               downloadButton("DivisionDownload", "Download data as .csv")
             )
@@ -184,9 +178,9 @@ ui <- fluidPage(
             pickerInput(
               inputId = "groupPicker",
               label = "Choose industry group(s):",
-              choices = sort(unique(registerPC$Group)),
+              choices = sort(unique(register1$Group)),
               choicesOpt = list(
-                subtext = unique(registerPC$Group.name)[order(unique(registerPC$Group))]
+                subtext = unique(register1$Group.name)[order(unique(register1$Group))]
               ),
               selected = 11,
               multiple = TRUE,
@@ -201,7 +195,7 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              dataTableOutput("groups") %>% withSpinner(color = "#4C566A")
+              DT::dataTableOutput("groups") %>% withSpinner(color = "#4C566A")
             ),
             box(
               width = NULL, align = "center", height = "auto",
@@ -219,19 +213,19 @@ ui <- fluidPage(
         ), # Industries
         tabItem(
           tabName = "regions",
-          h2("Incorporations: Regional comparison by Sector/Group"),
+          h2("Incorporations: Regional comparison"),
           offset = 0, style = "padding:3px;",
           fluidRow(
-            # Select industry group
+            # Select local authority district
             pickerInput(
-              inputId = "groupPicker2",
-              label = "Choose industry group:",
-              choices = sort(unique(registerPC$Group)),
-              choicesOpt = list(
-                subtext = unique(registerPC$Group.name)[order(unique(registerPC$Group))]
-              ),
-              selected = 11,
-              multiple = FALSE,
+              inputId = "ladPicker",
+              label = "Choose Local Authority District:",
+              choices = sort(unique(register1$District)),
+              # choicesOpt = list(
+              #   subtext = unique(registerPC$Group.name)[order(unique(registerPC$Group))]
+              # ),
+              selected = "Canterbury",
+              multiple = TRUE,
               options = list(
                 `live-search` = TRUE,
                 size = 7
@@ -243,14 +237,13 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("groupsRegion") %>% withSpinner(color = "#4C566A"),
-              downloadButton("regionGroupDownload", "Download data as .csv")
+              DT::dataTableOutput("districts") %>% withSpinner(color = "#4C566A")
             ),
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("sectorsRegion") %>% withSpinner(color = "#4C566A"),
-              downloadButton("regionSectorDownload", "Download data as .csv")
+              plotlyOutput("districtsPlot") %>% withSpinner(color = "#4C566A"),
+              downloadButton("districtsDownload", "Download data as .csv")
             )
           )
         ), # Regions
@@ -405,7 +398,7 @@ ui <- fluidPage(
               pickerInput(
                 inputId = "pickPostcode",
                 label = "Choose postcode district:",
-                choices = sort(unique(registerPC$postcodeDistrict)),
+                choices = sort(unique(register1$District)),
                 # choicesOpt = list(
                 #  subtext = unique(registerPC$Group.name)[order(unique(registerPC$Group))]
                 # ),
@@ -424,9 +417,9 @@ ui <- fluidPage(
               pickerInput(
                 inputId = "pickSIC",
                 label = "Choose SIC Class:",
-                choices = sort(unique(registerPC$Class)),
+                choices = sort(unique(register1$Class)),
                 choicesOpt = list(
-                  subtext = unique(registerPC$Class.name)[order(unique(registerPC$Class))]
+                  subtext = unique(register1$Class.name)[order(unique(register1$Class))]
                 ),
                 selected = 150,
                 multiple = TRUE,

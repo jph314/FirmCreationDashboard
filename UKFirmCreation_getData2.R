@@ -1,13 +1,18 @@
+# Set default start and end dates
+startDate <- ymd("2020-01-01")
+endDate <- ymd("2022-05-01")
+
 # Download latest register ----
 # Create a temp. file.
 # temp <- tempfile()
 # # Use `download.file()` to fetch the file into the temp. file.
 # download.file("http://download.companieshouse.gov.uk/BasicCompanyDataAsOneFile-2022-05-01.zip",temp)
 # # Unzip and read csv file.
+# library(vroom)
 # repD <- vroom(temp)
 # # Remove the temp file via 'unlink()'
 # unlink(temp)
-# # Make incorporation date as date format.
+# Make incorporation date as date format.
 # repD <- repD %>% rename(date=IncorporationDate)
 # repD$date <- as.Date(repD$date, "%d/%m/%Y")
 # repD$SIC5 <- as.integer(gsub("([0-9]+).*$", "\\1", repD$SICCode.SicText_1)) # pattern is by finding a set of numbers in the start and capturing them
@@ -17,12 +22,12 @@
 #                             repD$date <= "2022-04-30"), c(2,10,15,56)]
 # register <- register %>% rename(postcode = RegAddress.PostCode)
 # rm(repD)
-
-# Archive data ----
+# 
+# # Archive data ----
 # archive <- readRDS("data/incorporations_archive_byMonthPostcodeSIC5.rds")
 # archive <- archive %>% rename(date = IncorporationDate)
-
-# Harmonise the dataframes ----
+# 
+# # Harmonise the dataframes ----
 # register$archive <- "Latest register"
 # archive$archive <- "Archive"
 # archive <- archive %>% select(!postcode2)
@@ -42,26 +47,26 @@
 # postcodes <- fread("data/postcodes.csv") %>% rename(postcode = Postcode)
 # register$postcode <- gsub("[ .]", "", register$postcode)
 # registerLA <- merge(register, postcodes, by="postcode", all.x = T)
-# registerLA$District[is.na(registerLA$District)] <- "" 
+# registerLA$District[is.na(registerLA$District)] <- ""
 
 # #Save full register if required.
 # saveRDS(registerLA, "data/registerClassLA.rds")
 
 # Aggregation ----
-register2 <- registerLA %>% 
-  group_by(date, Class, District, archive) %>%
-  count() %>%
-  as.data.table()
-# Restore SIC and regional data
-register2 <- merge(register2, convert1, by="Class")
-convert2 <- fread("data/convertLA.csv")
-register2 <- merge(register2, convert2, by="District")
-# Save ready for use.
+# register2 <- registerLA %>%
+#   group_by(date, Class, District, archive) %>%
+#   count() %>%
+#   as.data.table()
+# # Restore SIC and regional data
+# register2 <- merge(register2, convert1, by="Class")
+# convert2 <- fread("data/convertLA.csv")
+# register2 <- merge(register2, convert2, by="District")
+# # Save ready for use.
 # saveRDS(register2, "data/registerAgg2.rds")
-
+# write_fst(register2, "data/registerAgg2.fst")
 
 # Load pre-aggregated data
-register1 <- readRDS("data/registerAgg2.rds")
+register1 <- read_fst("data/registerAgg2.fst")
 
 # 2019 data for comparison
 daily2019 <- fread("data/Daily2019.csv")
@@ -80,7 +85,22 @@ daily2019 <- fread("data/Daily2019.csv")
 # pcd2NUTS <- fread("data/convertNUTS.csv")
 # dissolutions <- merge(dissolutions, pcd2NUTS, by="postcodeDistrict")
 # dissolutions <- dissolutions %>% rename(date = dissolution_date)
+# dissolutions$date <- as.Date(dissolutions$date)
 # saveRDS(dissolutions, "data/dissolutions_snapshot_ready.rds")
+# write_fst(dissolutions, "data/dissolutions_snapshot_ready.fst")
 
-dissolutions <- readRDS("data/dissolutions_snapshot_ready.rds")
-dissolutions$date <- as.Date(dissolutions$date)
+dissolutions <- read_fst("data/dissolutions_snapshot_ready.fst")
+
+# # Legacy
+# registerPC <- readRDS("data/registerSectorsRegionsUK.rds")
+# archive <- readRDS("data/incorporations_archive_byMonthPostcodeSIC5_merged.rds")
+# 
+# # harmonise the dataframes
+# registerPC$archive <- "Latest register"
+# archive$archive <- "Archive"
+# registerPC <- registerPC %>% rename(postcode = RegAddress.PostCode)
+# registerPC <- registerPC %>% rename(SIC5 = SIC5dg1)
+# registerPC <- registerPC %>% select(!SICCode.SicText_1)
+# archive <- archive %>% select(!postcode2)
+# registerPC <- rbind(registerPC, archive)
+# rm(archive)
