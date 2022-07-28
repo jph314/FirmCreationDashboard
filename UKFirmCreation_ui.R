@@ -113,7 +113,7 @@ ui <- fluidPage(
                                 }'))),
       tags$script(HTML('
       $(document).ready(function() {
-        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> May 1, 2022 </span>\');
+        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> July 1, 2022 </span>\');
       })')),
       tabItems(
         tabItem(
