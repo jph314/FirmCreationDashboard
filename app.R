@@ -24,21 +24,22 @@ library(shinycssloaders)
 library(plotly)
 library(sf)
 library(markdown)
+library(runner)
 
 # Theme
 source("www/UKFirmCreationTheme.R")
 
 # Functions
-source("UKFirmCreation_functions3.R")
+source("UKFirmCreation_functions.R")
 
 # Data
-source("UKFirmCreation_getData2.R")
+source("UKFirmCreation_getData.R")
 
 # UI
 source("UKFirmCreation_ui.R")
 
 # Server
-source("UKFirmCreation_server2.R")
+source("UKFirmCreation_server.R")
 
 # Run the application ----
 shinyApp(ui = ui, server = server)
