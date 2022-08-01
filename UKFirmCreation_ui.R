@@ -50,26 +50,26 @@ ui <- fluidPage(
         ),
         menuItem("Get custom data", icon = icon("database"), tabName = "customData")
       ),
-      ### data selection: latest register vs. archive
-      radioButtons(
-        inputId = "pickData",
-        label = "Choose data:",
-        choices = c(
-          "Latest register",
-          "Archive"
-        ),
-        #  selected = "Latest register",
-        inline = TRUE
-      ), # End of pickData
+      # ### data selection: latest register vs. archive
+      # radioButtons(
+      #   inputId = "pickData",
+      #   label = "Choose data:",
+      #   choices = c(
+      #     "Latest register",
+      #     "Archive"
+      #   ),
+      #   #  selected = "Latest register",
+      #   inline = TRUE
+      # ), # End of pickData
 
       ### date select
       dateRangeInput(
         inputId = "dateAgg",
         label = "Choose date range:",
-        start = as.Date("2020-01-01"),
-        end = as.Date(max(registerPC$date)),
-        min = as.Date("2020-01-01"),
-        max = as.Date(max(registerPC$date)) + 30,
+        start = startDate,
+        end = endDate,
+        min = min(register$date) + 28,
+        max = endDate + 30,
         startview = "month", weekstart = 0,
         language = "en", separator = " to ", width = "100%"
       ),
@@ -113,7 +113,7 @@ ui <- fluidPage(
                                 }'))),
       tags$script(HTML('
       $(document).ready(function() {
-        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> May 1, 2022 </span>\');
+        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> July 1, 2022 </span>\');
       })')),
       tabItems(
         tabItem(
@@ -127,21 +127,21 @@ ui <- fluidPage(
           offset = 0, style = "padding:3px;",
           fluidRow(
             column(
-              width = 3, style = "padding:2px;", height = "auto",
+              width = 6, style = "padding:2px;", height = "auto",
               valueBoxOutput("vboxTotal", width = NULL)
             ),
             column(
-              width = 3, style = "padding:2px;", height = "auto",
-              valueBoxOutput("vboxVaccine", width = NULL)
-            ),
-            column(
-              width = 3, style = "padding:2px;", height = "auto",
-              valueBoxOutput("vboxLD", width = NULL)
-            ),
-            column(
-              width = 3, style = "padding:2px;", height = "auto",
-              valueBoxOutput("vboxOpen", width = NULL)
-            )
+              width = 6, style = "padding:2px;", height = "auto",
+              valueBoxOutput("vboxActive", width = NULL)
+            )#,
+            # column(
+            #   width = 3, style = "padding:2px;", height = "auto",
+            #   valueBoxOutput("vboxLD", width = NULL)
+            # ),
+            # column(
+            #   width = 3, style = "padding:2px;", height = "auto",
+            #   valueBoxOutput("vboxOpen", width = NULL)
+            # )
           ),
           fluidRow(
             box(
@@ -163,12 +163,6 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("donut", height = "400px") %>% withSpinner(color = "#4C566A"),
-              downloadButton("SectorDown", "Download data as .csv")
-            ),
-            box(
-              width = NULL, align = "center", height = "auto",
-              status = "primary", solidHeader = FALSE,
               plotlyOutput("treemap", height = "500px") %>% withSpinner(color = "#4C566A"),
               downloadButton("DivisionDownload", "Download data as .csv")
             )
@@ -184,11 +178,12 @@ ui <- fluidPage(
             pickerInput(
               inputId = "groupPicker",
               label = "Choose industry group(s):",
-              choices = sort(unique(registerPC$Group)),
-              choicesOpt = list(
-                subtext = unique(registerPC$Group.name)[order(unique(registerPC$Group))]
-              ),
-              selected = 11,
+              choices = c(sort(unique(register$Section)), sort(unique(register$Group))),
+               choicesOpt = list(
+                 subtext = c(unique(register$Section.name)[order(unique(register$Section))],
+                  unique(register$Group.name)[order(unique(register$Group))])
+               ),
+              selected = list("A", 11),
               multiple = TRUE,
               options = list(
                 `live-search` = TRUE,
@@ -201,37 +196,29 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              dataTableOutput("groups") %>% withSpinner(color = "#4C566A")
+              DT::dataTableOutput("groups") %>% withSpinner(color = "#4C566A")
             ),
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
               plotlyOutput("groupsPlot") %>% withSpinner(color = "#4C566A"),
               downloadButton("groupsDownload", "Download data as .csv")
-            ),
-            box(
-              width = NULL, align = "center", height = "auto",
-              status = "primary", solidHeader = FALSE,
-              plotlyOutput("sectorsPlot") %>% withSpinner(color = "#4C566A"),
-              downloadButton("sectorsDownload", "Download data as .csv")
             )
           )
         ), # Industries
         tabItem(
           tabName = "regions",
-          h2("Incorporations: Regional comparison by Sector/Group"),
+          h2("Incorporations: Regional comparison"),
           offset = 0, style = "padding:3px;",
           fluidRow(
-            # Select industry group
+            p("Note: Local Authority District-level aggregation for UK. County-level aggregation for England and Wales only."),
+            # Select local authority district
             pickerInput(
-              inputId = "groupPicker2",
-              label = "Choose industry group:",
-              choices = sort(unique(registerPC$Group)),
-              choicesOpt = list(
-                subtext = unique(registerPC$Group.name)[order(unique(registerPC$Group))]
-              ),
-              selected = 11,
-              multiple = FALSE,
+              inputId = "ladPicker",
+              label = "Choose Local Authority District/County:",
+              choices = c(sort(unique(register$District)), sort(unique(register$County))),
+              selected = "Canterbury",
+              multiple = TRUE,
               options = list(
                 `live-search` = TRUE,
                 size = 7
@@ -243,14 +230,13 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("groupsRegion") %>% withSpinner(color = "#4C566A"),
-              downloadButton("regionGroupDownload", "Download data as .csv")
+              DT::dataTableOutput("districts") %>% withSpinner(color = "#4C566A")
             ),
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("sectorsRegion") %>% withSpinner(color = "#4C566A"),
-              downloadButton("regionSectorDownload", "Download data as .csv")
+              plotlyOutput("districtsPlot") %>% withSpinner(color = "#4C566A"),
+              downloadButton("districtsDownload", "Download data as .csv")
             )
           )
         ), # Regions
@@ -262,20 +248,8 @@ ui <- fluidPage(
           offset = 0, style = "padding:3px;",
           fluidRow(
             column(
-              width = 3, style = "padding:2px;", height = "auto",
+              width = 6, style = "padding:2px;", height = "auto",
               valueBoxOutput("vboxTotalDis", width = NULL)
-            ),
-            column(
-              width = 3, style = "padding:2px;", height = "auto",
-              valueBoxOutput("vboxVaccineDis", width = NULL)
-            ),
-            column(
-              width = 3, style = "padding:2px;", height = "auto",
-              valueBoxOutput("vboxLDDis", width = NULL)
-            ),
-            column(
-              width = 3, style = "padding:2px;", height = "auto",
-              valueBoxOutput("vboxOpenDis", width = NULL)
             )
           ),
           fluidRow(
@@ -298,12 +272,6 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("donutDis", height = "400px") %>% withSpinner(color = "#4C566A"),
-              downloadButton("SectorDownDis", "Download data as .csv")
-            ),
-            box(
-              width = NULL, align = "center", height = "auto",
-              status = "primary", solidHeader = FALSE,
               plotlyOutput("treemapDis", height = "500px") %>% withSpinner(color = "#4C566A"),
               downloadButton("DivisionDisDownload", "Download data as .csv")
             )
@@ -319,11 +287,12 @@ ui <- fluidPage(
             pickerInput(
               inputId = "groupPickerDis",
               label = "Choose industry group(s):",
-              choices = sort(unique(dissolutions$Group)),
+              choices = c(sort(unique(dissolutions$Section)), sort(unique(dissolutions$Group))),
               choicesOpt = list(
-                subtext = unique(dissolutions$Group.name)[order(unique(dissolutions$Group))]
+                subtext = c(unique(dissolutions$Section.name)[order(unique(dissolutions$Section))],
+                            unique(dissolutions$Group.name)[order(unique(dissolutions$Group))])
               ),
-              selected = 15,
+              selected = list("A", 11),
               multiple = TRUE,
               options = list(
                 `live-search` = TRUE,
@@ -343,12 +312,6 @@ ui <- fluidPage(
               status = "primary", solidHeader = FALSE,
               plotlyOutput("groupsPlotDis") %>% withSpinner(color = "#4C566A"),
               downloadButton("groupsDownloadDis", "Download data as .csv")
-            ),
-            box(
-              width = NULL, align = "center", height = "auto",
-              status = "primary", solidHeader = FALSE,
-              plotlyOutput("sectorsPlotDis") %>% withSpinner(color = "#4C566A"),
-              downloadButton("sectorsDownloadDis", "Download data as .csv")
             )
           )
         ), # Industries dissolutions
@@ -356,19 +319,17 @@ ui <- fluidPage(
         ### Region Dissolutions
         tabItem(
           tabName = "regionsDis",
-          h2("Dissolutions: Regional comparison by Sector/Group"),
+          h2("Incorporations: Regional comparison"),
           offset = 0, style = "padding:3px;",
           fluidRow(
-            # Select industry group
+            p("Note: Local Authority District-level aggregation for UK. County-level aggregation for England and Wales only."),
+            # Select local authority district
             pickerInput(
-              inputId = "groupPicker2Dis",
-              label = "Choose industry group:",
-              choices = sort(unique(dissolutions$Group)),
-              choicesOpt = list(
-                subtext = unique(dissolutions$Group.name)[order(unique(dissolutions$Group))]
-              ),
-              selected = 11,
-              multiple = FALSE,
+              inputId = "ladPickerDis",
+              label = "Choose Local Authority District/County:",
+              choices = c(sort(unique(dissolutions$District)), sort(unique(dissolutions$County))),
+              selected = "Canterbury",
+              multiple = TRUE,
               options = list(
                 `live-search` = TRUE,
                 size = 7
@@ -380,14 +341,13 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("groupsRegionDis") %>% withSpinner(color = "#4C566A"),
-              downloadButton("regionGroupDownloadDis", "Download data as .csv")
+              DT::dataTableOutput("districtsDis") %>% withSpinner(color = "#4C566A")
             ),
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              plotlyOutput("sectorsRegionDis") %>% withSpinner(color = "#4C566A"),
-              downloadButton("regionSectorDownloadDis", "Download data as .csv")
+              plotlyOutput("districtsPlotDis") %>% withSpinner(color = "#4C566A"),
+              downloadButton("districtsDownloadDis", "Download data as .csv")
             )
           )
         ), # Regions dissolutions
@@ -405,7 +365,7 @@ ui <- fluidPage(
               pickerInput(
                 inputId = "pickPostcode",
                 label = "Choose postcode district:",
-                choices = sort(unique(registerPC$postcodeDistrict)),
+                choices = sort(unique(register$District)),
                 # choicesOpt = list(
                 #  subtext = unique(registerPC$Group.name)[order(unique(registerPC$Group))]
                 # ),
@@ -424,9 +384,9 @@ ui <- fluidPage(
               pickerInput(
                 inputId = "pickSIC",
                 label = "Choose SIC Class:",
-                choices = sort(unique(registerPC$Class)),
+                choices = sort(unique(register$Class)),
                 choicesOpt = list(
-                  subtext = unique(registerPC$Class.name)[order(unique(registerPC$Class))]
+                  subtext = unique(register$Class.name)[order(unique(register$Class))]
                 ),
                 selected = 150,
                 multiple = TRUE,

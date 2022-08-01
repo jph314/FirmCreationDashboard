@@ -44,21 +44,21 @@ server <- function(input, output, session) {
   # Select data version: latest register vs. archive
   # 1. I create a reactive, register(), that contains the rows from registerPC
   #  that match the selected data
-  register <- reactive({
-    registerPC[which(registerPC$archive == input$pickData), ]
-  })
+  # register <- reactive({
+  #   register1[which(register1$archive == input$pickData), ]
+  # })
 
   # Daily registrations per NUTS1 region for entire dataset, to be further filtered and aggregated below.
-  Tcountry <- reactive(
-    register() %>%
-      group_by(NUTS1, date) %>%
-      count()
-  )
+  # Tcountry <- reactive(
+  #   register() %>%
+  #     group_by(NUTS1, date) %>%
+  #     count()
+  # )
 
   ## AGGREGATE STATS ====
-  # Select NUTS1 regions according to country/region selected by user.
-  countrySel <- reactive({
-    countrySelect(input$pickCountry)
+  # Select country/region selected by user.
+  Tcountry <- reactive({
+    setDT(countrySelect(input$pickCountry, register, input$dateAgg[1], input$dateAgg[2]))
   })
 
   # Modify text in headers depending on country/region.
@@ -67,21 +67,15 @@ server <- function(input, output, session) {
   ### Value boxes
   # Sum registrations according to selected NUTS1 regions and relevant date ranges.
   output$vboxTotal <- renderValueBox(
-    vboxes(1, input$dateAgg[1], input$dateAgg[2], countrySel(), Tcountry())
+    vboxes(1, input$dateAgg[1], input$dateAgg[2], Tcountry())
   )
-  output$vboxVaccine <- renderValueBox(
-    vboxes(2, as.Date("2020-12-08"), input$dateAgg[2], countrySel(), Tcountry())
-  )
-  output$vboxLD <- renderValueBox(
-    vboxes(3, as.Date("2021-01-05"), as.Date("2021-04-11"), countrySel(), Tcountry())
-  )
-  output$vboxOpen <- renderValueBox(
-    vboxes(4, as.Date("2021-04-12"), input$dateAgg[2], countrySel(), Tcountry())
-  ) # VBoxes
+  # output$vboxActive <- renderValueBox(
+  #   active(register1[which(register1$archive == "Latest register"), ])
+  # )
 
   ### Daily registrations plot
   output$rollingAvg <- renderPlotly({
-    dailyPlot(input$dateAgg[1], input$dateAgg[2], countrySel(), Tcountry(), input$pickCountry)
+    dailyPlot(input$dateAgg[1], input$dateAgg[2], Tcountry(), input$pickCountry)
   }) # Daily plot
 
   # Download data
@@ -96,7 +90,7 @@ server <- function(input, output, session) {
 
   ### UK NUTS2 map
   output$UKmap <- renderPlotly({
-    showMap(input$dateAgg[1], input$dateAgg[2], input$pickData)
+    showMap(register, input$dateAgg[1], input$dateAgg[2], "registrations")
   }) # UK NUTS2 map
 
   # Download data
@@ -105,16 +99,13 @@ server <- function(input, output, session) {
       paste0("Total_Registrations_byRegion_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
     },
     content = function(fname) {
-      write.csv(NUTSdata(input$dateAgg[1], input$dateAgg[2], input$pickData), fname, row.names = F)
+      write.csv(LAdata(register, input$dateAgg[1], input$dateAgg[2]), fname, row.names = F)
     }
   )
 
   Tdivision <- reactive(
     # Aggregate registrations by SIC Division in selected date range and regions from full dataset.
-    register()[which(between(register()$date, input$dateAgg[1], input$dateAgg[2]) &
-      register()$NUTS1 %in% countrySel()), ] %>%
-      group_by(SectionAbb, Division.name) %>%
-      count()
+    Tcountry()[date>=input$dateAgg[1],list(n=sum(n)),by=list(SectionAbb, Division.name)]
   )
   ### Sector tree map
   sunburstDF <- reactive({
@@ -128,20 +119,20 @@ server <- function(input, output, session) {
     drawTreemap(sunburstDF(), input$dateAgg[1], input$dateAgg[2], input$pickCountry)
   }) # Treemap
 
-  # Sector donut plot
-  output$donut <- renderPlotly({
-    drawDonut(Tdivision(), input$dateAgg[1], input$dateAgg[2], input$pickCountry)
-  }) # Donut
+  # # Sector donut plot
+  # output$donut <- renderPlotly({
+  #   drawDonut(Tdivision(), input$dateAgg[1], input$dateAgg[2], input$pickCountry)
+  # }) # Donut
 
-  # Download data from donut
-  output$SectorDown <- downloadHandler(
-    filename = function() {
-      paste0("Registrations_bySector_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")
-    },
-    content = function(file) {
-      write.csv(donutData(Tdivision(), input$dateAgg[1], input$dateAgg[2]), file, row.names = F)
-    }
-  ) # download data of donut
+  # # Download data from donut
+  # output$SectorDown <- downloadHandler(
+  #   filename = function() {
+  #     paste0("Registrations_bySector_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")
+  #   },
+  #   content = function(file) {
+  #     write.csv(donutData(Tdivision(), input$dateAgg[1], input$dateAgg[2]), file, row.names = F)
+  #   }
+  # ) # download data of donut
 
   output$DivisionDownload <- downloadHandler(
     filename = function() {
@@ -154,24 +145,26 @@ server <- function(input, output, session) {
 
 
 
-  ### Industry divisions plots
+  ### Industry divisions plots ----
   # Count daily registrations per SIC Group in selected date range, regions and SIC Group.
-  Tgrp <- reactive(register()[which(between(register()$date, input$dateAgg[1], input$dateAgg[2]) &
-    register()$Group %in% input$groupPicker &
-    register()$NUTS1 %in% countrySel()), ] %>%
-    group_by(date, Group, Group.name, Section, Section.name) %>%
-    count() %>% ungroup() %>%
-    # Add rolling average for each Group.
-    group_by(Group) %>% mutate(avg = frollmean(n, n = 7)))
+  Tgrp <- reactive({
+    # groupSelect(Tcountry(), input$groupPicker)
+    Tcountry()[(Group %in% input$groupPicker | Section %in% input$groupPicker),list(n=sum(n)),
+                     keyby=list(date, Group, Group.name, Section, Section.name)] %>% 
+      group_by(Group) %>% mutate(sum = sum_run(x=n, k=28, idx=date), avg = sum/28) %>%
+      ungroup()
+    })
   # Selected Groups in a table.
-  secTable <- reactive(distinct(Tgrp()[-c(1, 6, 7)], Group, .keep_all = TRUE))
+  secTable <- reactive({
+    tableData(Tgrp(),input$groupPicker)
+  })
   output$groups <- renderDT({
     showTable(secTable())
   }) # Groups table
 
   # Industry groups plot
   output$groupsPlot <- renderPlotly({
-    groupPlot(Tgrp(), input$pickCountry)
+    groupPlot(Tgrp(), input$groupPicker, input$pickCountry, input$dateAgg[1])
   }) # Groups plot
   # Download data
   output$groupsDownload <- downloadHandler(
@@ -184,18 +177,10 @@ server <- function(input, output, session) {
   )
 
   # Daily registrations per Section for selected regions, dates and distinct Sections from selected Groups.
-  Tsec <- reactive(register()[which(between(register()$date, input$dateAgg[1], input$dateAgg[2]) &
-    register()$Section %in% secTable()$Section &
-    register()$NUTS1 %in% countrySel()), ] %>%
-    group_by(date, Section, Section.name) %>%
-    count() %>%
-    ungroup() %>%
-    group_by(Section) %>%
-    mutate(avg = frollmean(n, n = 7)))
-  # Industry sectors plot
-  output$sectorsPlot <- renderPlotly({
-    sectorPlot(Tsec(), input$pickCountry)
-  }) # Sectors plot
+  Tsec <- reactive({
+    sectSelect(Tcountry(), secTable()$Section)
+  })
+
   # Download data
   output$sectorsDownload <- downloadHandler(
     filename = function() {
@@ -207,49 +192,31 @@ server <- function(input, output, session) {
   )
   # Industry plots
 
-  ### Regional comparison plots by division ----
-  # Selected group data.
-  TregionGroup <- reactive(groupRegionData(
-    input$dateAgg[1], input$dateAgg[2],
-    input$groupPicker2, 1, input$pickData
-  ))
-  # Selected group plot.
-  output$groupsRegion <- renderPlotly({
-    groupRegion(TregionGroup(), input$groupPicker2, 1)
-  }) # Group plot
+  ### Regional plots ----
+  Tlad <- reactive({
+    ladSelect(Tcountry(), input$ladPicker, input$dateAgg[1], input$dateAgg[2])})
+  
+  # Selected local authority districts in a table.
+  output$districts <- renderDT({
+    ladTable(tableData2(Tlad(),input$ladPicker))
+  }) # Districts table
+ 
+  # LA districts plot
+  output$districtsPlot <- renderPlotly({
+    districtPlot(Tlad(), input$ladPicker, input$dateAgg[1])
+  }) # Districts plot
+  
   # Download data
-  output$regionGroupDownload <- downloadHandler(
+  output$districtsDownload <- downloadHandler(
     filename = function() {
-      paste0("Registrations_in_", input$groupPicker2, "_by_region_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
+      paste0("Registrations_by_district_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
     },
     content = function(file) {
-      write.csv(TregionGroup(), file, row.names = F)
+      write.csv(Tlad(), file, row.names = F)
     }
   )
 
-  # Selected sector data.
-  TregionSector <- reactive(groupRegionData(
-    input$dateAgg[1], input$dateAgg[2],
-    input$groupPicker2, 2, input$pickData
-  ))
-  # Selected sector plot.
-  output$sectorsRegion <- renderPlotly({
-    groupRegion(TregionSector(), input$groupPicker2, 2)
-  }) # Sector plot
-  output$regionSectorDownload <- downloadHandler(
-    filename = function() {
-      paste0(
-        "Registrations_in_",
-        register()$SectionAbb[which(register()$Group == input$groupPicker2)][1],
-        "_by_region_", input$dateAgg[1], "--", input$dateAgg[2], ".csv"
-      )
-    },
-    content = function(file) {
-      write.csv(TregionSector(), file, row.names = F)
-    }
-  )
-
-  Tcustom <- reactive(register() %>%
+  Tcustom <- reactive(register %>%
     group_by(date, Class, postcodeDistrict) %>%
     count() %>%
     as.data.table())
@@ -272,10 +239,9 @@ server <- function(input, output, session) {
   )
 
   # Dissolutions ----
-  TcountryDis <- dissolutions %>%
-    group_by(NUTS1, date) %>%
-    count() %>%
-    as.data.frame()
+  Dcountry <- reactive({
+    setDT(countrySelect(input$pickCountry, dissolutions, input$dateAgg[1], input$dateAgg[2]))
+  })
 
   ## Aggregate Analysis Dissolutions ----
   # Modify text in headers depending on country/region.
@@ -289,24 +255,16 @@ server <- function(input, output, session) {
   ### Value boxes
   # Sum registrations according to selected NUTS1 regions and relevant date ranges.
   output$vboxTotalDis <- renderValueBox(
-    vboxesDis(1, input$dateAgg[1], input$dateAgg[2], countrySel(), TcountryDis)
+    vboxesDis(1, input$dateAgg[1], input$dateAgg[2], input$pickCountry, Dcountry())
   )
-  output$vboxVaccineDis <- renderValueBox(
-    vboxesDis(2, as.Date("2020-12-08"), input$dateAgg[2], countrySel(), TcountryDis)
-  )
-  output$vboxLDDis <- renderValueBox(
-    vboxesDis(3, as.Date("2021-01-05"), as.Date("2021-04-11"), countrySel(), TcountryDis)
-  )
-  output$vboxOpenDis <- renderValueBox(
-    vboxesDis(4, as.Date("2021-04-12"), input$dateAgg[2], countrySel(), TcountryDis)
-  ) # VBoxes
 
   ### Daily dissolutions plot
   output$rollingAvgDis <- renderPlotly({
-    dailyPlotDis(
-      input$dateAgg[1], input$dateAgg[2], countrySel(),
-      TcountryDis, input$pickCountry
-    )
+    dailyPlot(input$dateAgg[1], input$dateAgg[2], Dcountry(), input$pickCountry) %>%
+      layout(
+        title = paste0(
+          "Daily company dissolutions in ", input$pickCountry),
+        yaxis = list(title = "Number of dissolutions"))
   }) # Daily plot
 
   # Download data
@@ -322,9 +280,10 @@ server <- function(input, output, session) {
     }
   )
 
-  ### UK NUTS2 map
+  ### UK NUTS2 map====
   output$UKmapDis <- renderPlotly({
-    showMapDis(input$dateAgg[1], input$dateAgg[2], input$pickData)
+    showMap(register, input$dateAgg[1], input$dateAgg[2], "dissolutions") %>%
+      layout(title=paste0("Dissolutions between<br>", input$dateAgg[1], " and ", input$dateAgg[2]))
   }) # UK NUTS2 map
 
   # Download data
@@ -337,30 +296,33 @@ server <- function(input, output, session) {
     }
   )
 
-  TdivisionDis <- reactive(
-    # Aggregate dissolutions by SIC Division in selected date range and regions from full dataset.
-    dissolutions[which(between(dissolutions$date, input$dateAgg[1], input$dateAgg[2]) &
-      dissolutions$NUTS1 %in% countrySel()), ] %>%
-      group_by(SectionAbb, Division.name) %>%
-      count()
+  # Draw sector treemap
+  Ddivision <- reactive(
+    # Aggregate registrations by SIC Division in selected date range and regions from full dataset.
+    Dcountry()[date>=input$dateAgg[1],list(n=sum(n)),by=list(SectionAbb, Division.name)]
   )
 
-  # Draw treemap.
   sunburstDFDis <- reactive({
     as.sunburstDF(
-      TdivisionDis(),
+      Ddivision(),
       valueCol = "n"
     )
   })
-
+  
   output$treemapDis <- renderPlotly({
-    drawTreemapDis(sunburstDFDis(), input$dateAgg[1], input$dateAgg[2], input$pickCountry)
+    drawTreemap(sunburstDFDis(), input$dateAgg[1], input$dateAgg[2], input$pickCountry) %>%
+      layout(
+        title = paste0(
+          "Distribution of dissolutions by SIC codes",
+          "<br>",
+          "<sup>",
+          "between ", input$dateAgg[1], " and ", input$dateAgg[2],
+          " in ",
+          input$pickCountry,
+          "</sup>"
+        ))
   }) # Treemap
 
-  # Sector donut plot
-  output$donutDis <- renderPlotly({
-    drawDonut(TdivisionDis(), input$dateAgg[1], input$dateAgg[2], input$pickCountry)
-  }) # Donut
 
   # Download data from donut
   output$SectorDownDis <- downloadHandler(
@@ -382,23 +344,26 @@ server <- function(input, output, session) {
   )
 
   ### Industry divisions plots ----
-  # Count daily registrations per SIC Group in selected date range, regions and SIC Group.
-  TgrpDis <- reactive(dissolutions[which(between(dissolutions$date, input$dateAgg[1], input$dateAgg[2]) &
-    dissolutions$Group %in% input$groupPickerDis &
-    dissolutions$NUTS1 %in% countrySel()), ] %>%
-    group_by(date, Group, Group.name, Section, Section.name) %>%
-    count() %>% ungroup() %>%
-    # Add rolling average for each Group.
-    group_by(Group) %>% mutate(avg = frollmean(n, n = 7)))
+  Dgrp <- reactive({
+    Dcountry()[(Group %in% input$groupPickerDis | Section %in% input$groupPickerDis),list(n=sum(n)),
+               keyby=list(date, Group, Group.name, Section, Section.name)] %>%
+      group_by(Group) %>% mutate(sum = sum_run(x=n, k=28, idx=date), avg = sum/28) %>%
+      ungroup()
+  })
   # Selected Groups in a table.
-  secTableDis <- reactive(distinct(TgrpDis()[-c(1, 6, 7)], Group, .keep_all = TRUE))
+  secTableDis <- reactive({
+    tableData(Dgrp(),input$groupPickerDis)
+  })
+
   output$groupsDis <- renderDT({
-    showTableDis(secTableDis())
+    showTable(secTableDis())
   }) # Groups table
 
   # Industry groups plot
   output$groupsPlotDis <- renderPlotly({
-    groupPlotDis(TgrpDis(), input$pickCountry)
+    groupPlot(Dgrp(), input$groupPickerDis, input$pickCountry, input$dateAgg[1]) %>%
+      layout(title=paste0(
+        "Daily company dissolutions by Group/Sector in ", input$pickCountry))
   }) # Groups plot
   # Download data
   output$groupsDownloadDis <- downloadHandler(
@@ -410,19 +375,6 @@ server <- function(input, output, session) {
     }
   )
 
-  # Daily registrations per Section for selected regions, dates and distinct Sections from selected Groups.
-  TsecDis <- reactive(dissolutions[which(between(dissolutions$date, input$dateAgg[1], input$dateAgg[2]) &
-    dissolutions$Section %in% secTable()$Section &
-    dissolutions$NUTS1 %in% countrySel()), ] %>%
-    group_by(date, Section, Section.name) %>%
-    count() %>%
-    ungroup() %>%
-    group_by(Section) %>%
-    mutate(avg = frollmean(n, n = 7)))
-  # Industry sectors plot
-  output$sectorsPlotDis <- renderPlotly({
-    sectorPlotDis(TsecDis(), input$pickCountry)
-  }) # Sectors plot
   # Download data
   output$sectorsDownloadDis <- downloadHandler(
     filename = function() {
@@ -435,46 +387,30 @@ server <- function(input, output, session) {
   # Industry plots
 
   ### Regional comparison plots by division ----
-  # Selected group data.
-  TregionGroupDis <- reactive(groupRegionDataDis(
-    input$dateAgg[1], input$dateAgg[2],
-    input$groupPicker2Dis, 1
-  ))
-  # Selected group plot.
-  output$groupsRegionDis <- renderPlotly({
-    groupRegionDis(TregionGroupDis(), input$groupPicker2Dis, 1)
-  }) # Group plot
+  ### Regional plots ----
+  Dlad <- reactive({
+    ladSelect(Dcountry(), input$ladPickerDis, input$dateAgg[1], input$dateAgg[2])})
+  
+  # Selected local authority districts in a table.
+  output$districtsDis <- renderDT({
+    ladTable(tableData2(Dlad(),input$ladPickerDis))
+  }) # Districts table
+  
+  # LA districts plot
+  output$districtsPlotDis <- renderPlotly({
+    districtPlot(Dlad(), input$ladPickerDis, input$dateAgg[1]) %>%
+      layout(title=paste0(
+        "Daily company dissolutions by Local Authority District/County in ", input$pickCountry))
+  }) # Districts plot
+  
   # Download data
-  output$regionGroupDownloadDis <- downloadHandler(
+  output$districtsDownloadDis <- downloadHandler(
     filename = function() {
-      paste0("Dissolutions_in_", input$groupPicker2Dis, "_by_region_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
+      paste0("Dissolutions_by_district_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
     },
     content = function(file) {
-      write.csv(TregionGroupDis(), file, row.names = F)
+      write.csv(Dlad(), file, row.names = F)
     }
   )
-
-  # Selected sector data.
-  TregionSectorDis <- reactive(groupRegionDataDis(
-    input$dateAgg[1],
-    input$dateAgg[2],
-    input$groupPicker2Dis,
-    2
-  ))
-  # Selected sector plot.
-  output$sectorsRegionDis <- renderPlotly({
-    groupRegionDis(TregionSectorDis(), input$groupPicker2Dis, 2)
-  }) # Sector plot
-  output$regionSectorDownloadDis <- downloadHandler(
-    filename = function() {
-      paste0(
-        "Dissolutions_in_",
-        dissolutions$SectionAbb[which(dissolutions$Group == input$groupPicker2Dis)][1],
-        "_by_region_", input$dateAgg[1], "--", input$dateAgg[2], ".csv"
-      )
-    },
-    content = function(file) {
-      write.csv(TregionSectorDis(), file, row.names = F)
-    }
-  )
+  
 } # Server

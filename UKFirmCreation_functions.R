@@ -1,27 +1,26 @@
+# Aggregate home----
 # Select NUTS1 regions according to country/region selected by user.
-countrySelect <- function(pickCountry) {
+countrySelect <- function(pickCountry, register, d1, d2) {
+  register <- register[which(between(register$date, (d1-28), d2)),]
   if (pickCountry == "United Kingdom") {
-    list(
-      "UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKI", "UKJ", "UKK", "UKL",
-      "UKM", "UKN"
-    )
+    register
   } else if (pickCountry == "England") {
-    list("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKI", "UKJ", "UKK")
+    register[which(register$Country=="England"),]
   } else if (pickCountry == "London") {
-    list("UKI")
+    register[which(register$County %in% list("Greater London", "City of London")),]
   } else if (pickCountry == "England excl. London") {
-    list("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKJ", "UKK")
+    register[which(register$Country=="England" & !(register$County %in% list("Greater London", "City of London"))),]
   } else if (pickCountry == "Scotland") {
-    list("UKM")
+    register[which(register$Country=="Scotland"),]
   } else if (pickCountry == "Wales") {
-    list("UKL")
+    register[which(register$Country=="Wales"),]
   } else if (pickCountry == "Northern Ireland") {
-    list("UKN")
+    register[which(register$Country=="Northern Ireland"),]
   }
 }
 
 # Value boxes
-vboxes <- function(vb, d1, d2, country, Tcountry) {
+vboxes <- function(vb, d1, d2, Tcountry) {
   if (vb == 1) {
     subtitle <- paste0("New registrations between ", d1, " and ", d2)
     color <- "aqua"
@@ -40,101 +39,83 @@ vboxes <- function(vb, d1, d2, country, Tcountry) {
     icon <- icon("store-alt")
   }
   valueBox(
-    value = prettyNum(sum(Tcountry$n[which(Tcountry$NUTS1 %in% country &
-      between(Tcountry$date, d1, d2))]),
+    value = prettyNum(sum(Tcountry$n[which(between(Tcountry$date, d1, d2))]),
     big.mark = ",", scientific = FALSE
     ),
     subtitle = subtitle, color = color, icon = icon
   )
 }
 
-# Daily registrations plot
-dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
-  # Sum data for each day in relevant regions and date range.
-  raData <- Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))] %>%
-    aggregate(
-      by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))]),
-      sum
-    ) %>%
-    rename(n = x)
-  # Data for relevant regions during LD3.
-  ld3Data <- Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2021-01-05"), as.Date("2021-04-12")))] %>%
-    aggregate(
-      by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2021-01-05"), as.Date("2021-04-12")))]),
-      sum
-    )
-  medianLD3 <- median(ld3Data$x)
-  # Data for relevant regions during 2019.
-  # data2019 <- Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2019-01-01"), as.Date("2019-12-31")))] %>%
-  #   aggregate(by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, as.Date("2019-01-01"), as.Date("2019-12-31")))]),
-  #             sum)
-  # median2019 <- median(data2019$x)
-  # Saved values from archive data for greater accuracy.
-  archive <- daily2019$n[which(daily2019$NUTS1 %in% country)] %>%
-    aggregate(
-      by = list(date = daily2019$date[which(daily2019$NUTS1 %in% country)]),
-      sum
-    ) %>%
-    rename(n = x)
-  archiveMedians <- tibble(
-    Region = c("United Kingdom", "England", "London", "England excl. London", "Scotland", "Wales", "Northern Ireland"),
-    Median = c(2414.5, 2192.5, 777, 1421, 124, 68, 32)
+active <- function(data) {
+  valueBox(
+    value = prettyNum(sum(data$n), big.mark = ",", scientific = FALSE),
+    subtitle = "Total active firms", color = "red", icon = icon("store-alt")
   )
-  median2019 <- archiveMedians$Median[[which(archiveMedians$Region == pickCountry)]]
+}
+
+# Daily registrations plot
+dailyPlot <- function(d1, d2, Tcountry, pickCountry) {
+  # Input data is already selected by date and country but must be aggregated by date.
+  plotData <- Tcountry[,list(n=sum(n)),keyby="date"] %>%
+    mutate(avg = sum_run(x=n, k=7, idx=date)/7)
+  plotData <- plotData[date>=d1,]
+  # archive <- setDT(countrySelect(pickCountry, register1[which(register1$archive=="Archive"),], ymd("2019-01-01"), ymd("2019-12-31")))
+  # archive <- archive[,list(x=sum(n)),by="date"]
+  # archive <- archive[order(archive$date),]
+  # archiveMedians <- tibble(
+  #   Region = c("United Kingdom", "England", "London", "England excl. London", "Scotland", "Wales", "Northern Ireland"),
+  #   Median = c(2414.5, 2192.5, 777, 1421, 124, 68, 32)
+  # )
+  # median2019 <- archiveMedians$Median[[which(archiveMedians$Region == pickCountry)]]
+  # archiveExtend <- data.frame(date = seq(ymd("2019-01-01"),d2,"days"))
+  # archiveExtend$yday <- yday(archiveExtend$date)
+  # archive$yday <- yday(archive$date)
+  # archive <- merge(archiveExtend, archive, by="yday") %>% rename(date=date.x)
+  # archive <- archive[order(archive$date),]
   # Plot rolling average/daily registrations, with or without lockdown periods.
   plot_ly() %>%
     add_trace(
-      x = raData$date, y = (frollmean(raData$n, n = 7)), name = "7-day rolling average",
-      type = "scatter", mode = "lines", showlegend = FALSE, visible = TRUE
+      x = plotData$date, y = plotData$avg, name = "7-day rolling average",
+      type = "scatter", mode = "lines", showlegend = TRUE, visible = TRUE
     ) %>%
+    # add_trace(
+    #   x = archive$date, y = (frollmean(archive$x, n = 7)), name = "2019; 7-day RA",
+    #   type = "scatter", mode = "lines", showlegend = TRUE, visible = FALSE,
+    #   line = list(dash = "dash", width = 0.9)
+    # ) %>%
     add_trace(
-      x = (archive$date + 365), y = (frollmean(archive$n, n = 7)), name = "2019; 7-day RA",
-      type = "scatter", mode = "lines", showlegend = TRUE, visible = TRUE,
-      line = list(dash = "dash", width = 0.5)
+      x = plotData$date, y = plotData$n, name = "Daily total",
+      type = "bar", showlegend = TRUE, visible = TRUE, opacity = 0.2
     ) %>%
-    add_trace(
-      x = raData$date, y = raData$n, name = "daily total",
-      type = "bar", showlegend = FALSE, visible = FALSE
-    ) %>%
-    add_trace(
-      x = (archive$date + 365), y = archive$n, name = "2019; daily",
-      type = "scatter", mode = "lines", showlegend = TRUE, visible = FALSE,
-      line = list(dash = "dash", width = 0.5)
-    ) %>%
+    # add_trace(
+    #   x = archive$date, y = archive$x, name = "2019; daily",
+    #   type = "scatter", mode = "lines", showlegend = FALSE, visible = FALSE,
+    #   line = list(dash = "dash", width = 0.5)
+    # ) %>%
     add_segments(
       x = d1, xend = d2,
-      y = median(raData$n), yend = median(raData$n), name = "Median; selected period", showlegend = T
+      y = median(plotData$n), yend = median(plotData$n), name = "Median; selected period", showlegend = T
     ) %>%
-    add_segments(
-      x = min(raData$date), xend = max(raData$date),
-      y = medianLD3, yend = medianLD3, name = "Median; Lockdown 3", showlegend = T
-    ) %>%
-    add_segments(
-      x = min(raData$date), xend = max(raData$date),
-      y = median2019, yend = median2019, name = "Median; 2019", showlegend = T
-    ) %>%
+    # add_segments(
+    #   x = min(raData$date), xend = max(raData$date),
+    #   y = medianLD3, yend = medianLD3, name = "Median; Lockdown 3", showlegend = T
+    # ) %>%
+    # add_segments(
+    #   x = min(plotData$date), xend = max(plotData$date),
+    #   y = median2019, yend = median2019, name = "Median; 2019", showlegend = T
+    # ) %>%
     layout(
       title = paste0(
         "Daily company registrations in ",
-        pickCountry #,
+        pickCountry # ,
         # "<br>",
         # "<sup>",
         # "between ", d1, " and ", d2,
         # "</sup>"
       ),
-      yaxis = list(title = "Number of registrations", showgrid = F, range = c(0, 1.1 * max(raData$n))),
+      yaxis = list(title = "Number of registrations", showgrid = F, range = c(0, 1.1 * max(plotData$n))),
       xaxis = list(range = c(d1, d2)),
       updatemenus = list(
-        list(type = "dropdown", y = 0.95, x = 1.25, direction = "down", buttons = list(
-          list(
-            label = "Rolling average", method = "update",
-            args = list(list(visible = c(TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE)))
-          ),
-          list(
-            label = "Daily total", method = "update",
-            args = list(list(visible = c(FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE)))
-          )
-        )),
         list(type = "dropdown", y = 0.75, x = 1.25, active = 1, direction = "down", buttons = list(
           list(label = "Show lockdowns", method = "relayout", args = list(list(
             shapes = list(
@@ -142,19 +123,19 @@ dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
                 type = "rect",
                 fillcolor = "gray", line = list(color = "gray"), opacity = 0.2,
                 x0 = "2020-03-23", x1 = "2020-07-04", xref = "x",
-                y0 = 0, y1 = 4000, yref = "y"
+                y0 = 0, y1 = max(plotData$n), yref = "y"
               ),
               list(
                 type = "rect",
                 fillcolor = "gray", line = list(color = "gray"), opacity = 0.2,
                 x0 = "2020-11-05", x1 = "2020-12-02", xref = "x",
-                y0 = 0, y1 = 4000, yref = "y"
+                y0 = 0, y1 = max(plotData$n), yref = "y"
               ),
               list(
                 type = "rect",
                 fillcolor = "gray", line = list(color = "gray"), opacity = 0.2,
                 x0 = "2021-01-05", x1 = "2021-04-12", xref = "x",
-                y0 = 0, y1 = 4000, yref = "y"
+                y0 = 0, y1 = max(plotData$n), yref = "y"
               )
             )
           ))),
@@ -166,61 +147,69 @@ dailyPlot <- function(d1, d2, country, Tcountry, pickCountry) {
 }
 
 # Daily registrations data from plot to export as downloadable .csv
-dailyData <-  function(d1, d2, country, Tcountry, pickCountry) {
-  # Sum data for each day in relevant regions and date range.
-  raData <- Tcountry$n[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))] %>%
+dailyData <- function(d1, d2, country, Tcountry, pickCountry) {
+  # Sum data for each day.
+  raData <- Tcountry$n %>%
     aggregate(
-      by = list(date = Tcountry$date[which(Tcountry$NUTS1 %in% country & between(Tcountry$date, d1, d2))]),
+      by = list(date = Tcountry$date),
       sum
     ) %>%
     rename(n = x)
   raData$rollingAverage <- frollmean(raData$n, n = 7)
-  # Saved values from archive data for greater accuracy.
-  archive <- daily2019$n[which(daily2019$NUTS1 %in% country)] %>%
-    aggregate(
-      by = list(date = daily2019$date[which(daily2019$NUTS1 %in% country)]),
-      sum
-    ) %>%
+  # 2019 archive data.
+  archive <- countrySelect(pickCountry, register1[which(register1$archive=="Archive"),], ymd("2019-01-01"), ymd("2019-12-31"))
+  archive <- archive$n %>% aggregate(
+    by = list(date = archive$date),
+    sum
+  ) %>%
     rename(n = x)
   archive$rollingAverage <- frollmean(archive$n, n = 7)
   # append raData and archive
   data <- rbind(archive, raData)
 }
-  
-  
-# UK NUTS2 map
-showMap <- function(d1, d2) {
+
+
+# UK LAD map 
+map0 <- st_read("data/mapC")
+showMap <- function(data0, d1, d2, RorD) {
   # Load shapefile.
-  # https://geoportal.statistics.gov.uk/datasets/nuts-level-2-january-2018-ultra-generalised-clipped-boundaries-in-the-united-kingdom/
-  mapNUTS <- map0
-  # Aggregate registrations by NUTS2 in selected date range from full dataset.
-  TNUTS <- registerPC[which(between(registerPC$date, d1, d2)), ] %>%
-    group_by(NUTS2) %>%
-    count()
+  # https://geoportal.statistics.gov.uk/datasets/ons::local-authority-districts-december-2021-uk-buc/
+  mapLA <- map0
+  # Aggregate registrations by LAD in selected date range from full dataset.
+  # data0 <- data0[which(between(data0$date, d1, d2)),]
+  # TLA <- data0$n %>% aggregate(
+  #   by=list(District = data0$District, Code = data0$`District Code`),
+  #   sum) %>% rename(n=x)
+  data0 <- setDT(data0)
+  TLA <- data0[between(date,d1,d2),list(n=sum(n)),by=list(District)]
   # Draw map.
-  mapNUTS <- merge(mapNUTS, TNUTS, by.x = "nuts218cd", by.y = "NUTS2")
+  mapLA <- merge(mapLA, TLA, by.x = "LAD21NM", by.y = "District")
   mapcolour <- c("#81A1C1", "#88C0D0", "#83AB61", "#EBCB8B", "#D08770", "#BF616A", "#D63A2F")
-  plot_ly(mapNUTS) %>%
+  plot_ly(mapLA) %>%
     add_sf(
-      color = ~ n^0.6,
+      color = ~ n^0.3,
       colors = mapcolour,
-      split = ~nuts218cd,
-      text = ~ paste0(nuts218nm, "<br>", n, " new registrations"),
-      line = list(width = 0.9, color = "#4C566A"),
+      split = ~LAD21NM,
+      text = ~ paste0(LAD21NM, "<br>", n, " new ", RorD),
+      line = list(width = 0.5, color = "#4C566A"),
       showlegend = FALSE,
       hoverinfo = "text", hoveron = "fills",
       type = "scatter"
     ) %>%
-    layout() %>%
-    colorbar(title = paste0("New registrations between<br>", d1, " and ", d2), 
-             len = 0.5, x = 0.7, y = 0.65)
+     layout(title=paste0("New ", RorD, " between<br>", d1, " and ", d2)) %>%
+     hide_colorbar()
+    # colorbar(
+    #   title = paste0("New registrations between<br>", d1, " and ", d2),
+    #   len = 0.5, x = 0.7, y = 0.65
+    # )
 }
 
-NUTSdata <- function(d1, d2) {
-  # Aggregate registrations by NUTS2 in selected date range from full dataset.
-  TNUTS <- registerPC[which(between(registerPC$date, d1, d2)), ] %>%
-    group_by(NUTS218NM) %>%
-    count()
+LAdata <- function(data0, d1, d2) {
+  # Aggregate registrations by NUTS2.
+  data0 <- data0[which(between(data0$date, d1, d2)),]
+  TLA <- data0$n %>% aggregate(
+    by=list(District = data0$District, Code = data0$`District Code`),
+    sum) %>% rename(n=x)
 } # NUTS data
 
 # Sector tree map
@@ -265,7 +254,7 @@ as.sunburstDF <- function(DF, valueCol = NULL) {
   return(hierarchyDT)
 }
 # Draw the treemap.
-map0 <- st_read("data/map")
+
 drawTreemap <- function(df, d1, d2, pickCountry) {
   plot_ly(
     alpha = 0.5, data = df, ids = ~ids, labels = ~labels,
@@ -297,16 +286,43 @@ drawDonut <- function(df, d1, d2, pickCountry) {
   plot_ly(data = Tsection, labels = ~SectionAbb, values = ~n) %>%
     add_pie(hole = 0.6) %>%
     layout(title = paste0(
-      "New registrations by sector between ", 
+      "New registrations by sector between ",
       d1, " and ", d2,
       " in ",
-      pickCountry))
+      pickCountry
+    ))
 }
 
 donutData <- function(df, d1, d2) {
   Tsection <- df$n %>%
     aggregate(by = list(df$SectionAbb), sum) %>%
     rename(SectionAbb = Group.1, n = x)
+}
+
+# Sectors ----
+# Select groups according to selection
+groupSelect <- function(register, groups) {
+  Tgrp <- register[which(register$Group %in% groups), ]
+  Tgrp <- Tgrp$n %>% aggregate(
+    by=list(date=Tgrp$date, Group=Tgrp$Group, Group.name=Tgrp$Group.name, Section=Tgrp$Section, Section.name=Tgrp$Section.name), sum) %>%
+  rename(n=x) %>%
+  group_by(Group) %>% mutate(avg = frollmean(n, n = 7)) %>% ungroup()
+}
+
+# Select sectors
+sectSelect <- function(register, sects) {
+  Tsec <- register[which(register$Section %in% sects), ]
+  Tsec <- Tsec$n %>% aggregate(
+    by=list(date=Tsec$date, Section=Tsec$Section, Section.name=Tsec$Section.name), sum) %>%
+    rename(n=x) %>%
+    group_by(Section) %>% mutate(avg = frollmean(n, n = 7)) %>% ungroup()
+}
+
+# Table data
+tableData <- function(Tgrp, pickedSect) {
+  s1 <- unique(Tgrp[which(Tgrp$Section %in% pickedSect),c(4,5)])
+  g1 <- unique(Tgrp[which(Tgrp$Group %in% pickedSect),c(2:5)])
+  bind_rows(g1,s1)
 }
 
 # Groups table
@@ -341,155 +357,100 @@ showTable <- function(tabledata) {
   )
 }
 
-# Industry groups plot
-groupPlot <- function(df, pickCountry) {
-  plot_ly(data = df) %>%
+groupPlot <- function(Tgrp, pickedSect, pickCountry, d1) {
+  Tgrp <- setDT(Tgrp)
+  Tsec <- Tgrp[,list(n=sum(n)),keyby=list(date, Section, Section.name)] %>%
+    group_by(Section) %>% mutate(sum = sum_run(x=n, k=28, idx=date), avg = sum/28) %>%
+    ungroup()
+  Tsec <- setDT(Tsec)
+  Tgrp <- Tgrp[date>=d1,]
+  Tsec <- Tsec[date>=d1,]
+  
+  plot_ly() %>%
     add_trace(
-      x = ~date, y = ~avg, color = ~Group.name, colors = "viridis",
+      data = Tgrp[Group %in% pickedSect,], x = ~date, y = ~avg, color = ~Group.name, colors = "viridis",
       type = "scatter", mode = "lines", visible = TRUE,
       line = list(width = 0.8)
     ) %>%
     add_trace(
-      x = ~date, y = ~n, color = ~Group.name, colors = "viridis",
-      type = "scatter", mode = "lines", visible = FALSE,
+      data = Tsec[Section %in% pickedSect,], x = ~date, y = ~avg, color = ~Section.name, colors = "viridis",
+      type = "scatter", mode = "lines", visible = TRUE,
       line = list(width = 0.8)
     ) %>%
     layout(
-      title = paste0("Daily registrations by industry group in ", pickCountry),
-      yaxis = list(title = "Number of registrations"),
+      title = paste0("Daily registrations by industry Group/Sector in ", pickCountry),
+      yaxis = list(title = "28-day rolling average"),
       xaxis = list(showgrid = FALSE, title = ""),
-      updatemenus = list(
-        list(type = "dropdown", y = 1, x = 1.4, direction = "down", buttons = list(
-          list(
-            label = "Rolling average", method = "update",
-            args = list(list(visible = c(rep(TRUE, length(unique(df$Group))), rep(FALSE, length(unique(df$Group))))))
-          ),
-          list(
-            label = "Daily total", method = "update",
-            args = list(list(visible = c(rep(FALSE, length(unique(df$Group))), rep(TRUE, length(unique(df$Group))))))
-          )
-        ))
-      ),
       legend = list(x = 1, y = 0.8)
     )
 }
 
-# Industry sectors plot
-sectorPlot <- function(df, pickCountry) {
-  # # Daily registrations per Section for selected regions, dates and distinct Sections from selected Groups.
-  # df <- registerPC[which(between(registerPC$date, d1, d2) &
-  #   registerPC$Section %in% section &
-  #   registerPC$NUTS1 %in% country), ] %>%
-  #   group_by(date, Section, Section.name) %>%
-  #   count() %>%
-  #   ungroup() %>%
-  #   group_by(Section) %>%
-  #   mutate(avg = frollmean(n, n = 7))
+# Regions ----
+# Select LADs
+ladSelect <- function(register, lads, d1, d2) {
+  Tlad <- register[(District %in% lads | County %in% lads)& between(date,(d1-28),d2),list(n=sum(n)),
+                   keyby=list(date, District, County, Country)] %>% 
+    group_by(District) %>% mutate(sum = sum_run(x=n, k=28, idx=date), avg = sum/28) %>%
+    ungroup()
+}
 
-  plot_ly(data = df) %>%
-    add_trace(
-      x = ~date, y = ~avg, color = ~Section.name, colors = "viridis",
-      type = "scatter", mode = "lines", visible = TRUE,
-      line = list(width = 0.8)
-    ) %>%
-    add_trace(
-      x = ~date, y = ~n, color = ~Section.name, colors = "viridis",
-      type = "scatter", mode = "lines", visible = FALSE,
-      line = list(width = 0.8)
-    ) %>%
-    layout(
-      title = paste0("Daily registrations by industry sector in ", pickCountry),
-      yaxis = list(title = "Number of registrations"),
-      xaxis = list(showgrid = FALSE, title = ""),
-      updatemenus = list(
-        list(type = "dropdown", y = 1, x = 1.4, direction = "down", buttons = list(
-          list(
-            label = "Rolling average", method = "update",
-            args = list(list(visible = c(rep(TRUE, length(unique(df$Section))), rep(FALSE, length(unique(df$Section))))))
-          ),
-          list(
-            label = "Daily total", method = "update",
-            args = list(list(visible = c(rep(FALSE, length(unique(df$Section))), rep(TRUE, length(unique(df$Section))))))
-          )
-        ))
-      ),
-      legend = list(x = 1, y = 0.8)
+# Table data
+tableData2 <- function(Tlad, pickedDist) {
+  s1 <- unique(Tlad[which(Tlad$District %in% pickedDist),c(2:4)])
+  g1 <- unique(Tlad[which(Tlad$County %in% pickedDist),c(3,4)])
+  bind_rows(s1,g1)
+}
+ladTable <- function(tabledata) {
+  container_dt <- withTags(table(
+    class = "display",
+    thead(
+      tr(
+        lapply((c("District", "County", "Country")), th)
+      )
     )
+  ))
+  datatable(tabledata,
+            container = container_dt, rownames = F, class = "",
+            options = list(
+              autoWidth = T, lengthChange = FALSE, searching = FALSE,
+              columnDefs = list(
+                list(
+                  className = "dt-center",
+                  targets = "_all"
+                ),
+                list(
+                  width = "40px",
+                  target = "_all"
+                )
+              )
+            )
+  )
 }
 
-groupRegionData <- function(d1, d2, group, a) {
-  if (a==1) {
-    df <- registerPC[which(between(registerPC$date, d1, d2) &
-                             registerPC$Group == group), ] %>%
-      group_by(date, NUTS1) %>%
-      count() %>%
-      ungroup() %>%
-      group_by(NUTS1) %>%
-      pivot_wider(id_cols=date, names_from=NUTS1, values_from=n)
-  } else {
-    section <- registerPC$SectionAbb[which(registerPC$Group == group)][1]
-    df <- registerPC[which(between(registerPC$date, d1, d2) &
-                             registerPC$SectionAbb == section), ] %>%
-      group_by(date, NUTS1) %>%
-      count() %>%
-      ungroup() %>%
-      group_by(NUTS1) %>%
-      pivot_wider(id_cols=date, names_from=NUTS1, values_from=n)
-  }
-  regions <- c("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKI", "UKJ", "UKK", "UKL", "UKM", "UKN")
-  df[setdiff(regions, names(df))] <- 0
-  df$Eng <- select(df, !(c(date, UKL, UKM, UKN))) %>% rowSums()
-  df$EngExLon <- df$Eng - df$UKI
-  df <- df %>% rename(Lon = UKI, Sco = UKM, Wal = UKL, NI = UKN) %>%
-    select(c(date, Eng, EngExLon, Lon, Sco, Wal, NI)) %>%
-    pivot_longer(!date, names_to="Region", values_to="n") #%>%
-  df <- merge(expand.grid(date=as_date(min(df$date):max(df$date)),Region=unique(df$Region)),
-               df, all=TRUE)
-  df$n <- replace_na(df$n,0)
-  df <- df %>% group_by(Region) %>%
-    mutate(avg = frollmean(n, n = 7))
-  df$Region <- mapvalues(df$Region, from=c("Eng", "EngExLon", "Lon", "Sco", "Wal", "NI"), 
-                         to=c("England", "England excl. London", "London", "Scotland", "Wales", "Northern Ireland"))
-  df
-}
-
-groupRegion <- function(data, group, a) {
-  # Set title.
-  if (a == 1) {
-    groupName <- registerPC$Group.name[which(registerPC$Group == group)][1]
-    title <- paste0("Daily registrations by region in ", groupName)
-  } else if (a == 2) {
-    section <- registerPC$SectionAbb[which(registerPC$Group == group)][1]
-    title <- paste0("Daily registrations by region in ", section)
-  }
-  #Plot.
-  plot_ly(data = data) %>%
+# Local authority districts plot
+districtPlot <- function(Tlad, pickedDist, d1) {
+  Tlad <- setDT(Tlad)
+  Tcty <- Tlad[,list(n=sum(n)),keyby=list(date, County, Country)] %>%
+    group_by(County) %>% mutate(sum = sum_run(x=n, k=28, idx=date), avg = sum/28) %>%
+    ungroup()
+  Tcty <- setDT(Tcty)
+  Tlad <- Tlad[date >= d1,]
+  Tcty <- Tcty[date >= d1,]
+  plot_ly() %>%
     add_trace(
-      x = ~date, y = ~avg, color = ~Region, colors = "viridis",
+      data = Tlad[District %in% pickedDist,], x = ~date, y = ~avg, color = ~District, colors = "viridis",
       type = "scatter", mode = "lines", visible = TRUE,
       line = list(width = 0.8)
     ) %>%
     add_trace(
-      x = ~date, y = ~n, color = ~Region, colors = "viridis",
-      type = "scatter", mode = "lines", visible = FALSE,
+      data = Tcty[County %in% pickedDist,], x = ~date, y = ~avg, color = ~County, colors = "viridis",
+      type = "scatter", mode = "lines", visible = TRUE,
       line = list(width = 0.8)
     ) %>%
     layout(
-      title = title,
-      yaxis = list(title = "Number of registrations"),
+      title = paste0("Daily registrations by Local Authority District/County"),
+      yaxis = list(title = "28-day rolling average"),
       xaxis = list(showgrid = FALSE, title = ""),
-      updatemenus = list(
-        list(type = "dropdown", y = 1, x = 1.4, direction = "down", buttons = list(
-          list(
-            label = "Rolling average", method = "update",
-            args = list(list(visible = c(rep(TRUE, 6), rep(FALSE, 6))))
-          ),
-          list(
-            label = "Daily total", method = "update",
-            args = list(list(visible = c(rep(FALSE, 6), rep(TRUE, 6))))
-          )
-        ))
-      ),
       legend = list(x = 1, y = 0.8)
     )
 }
@@ -507,69 +468,168 @@ downloadData <- function(name, output) {
 }
 
 # Create Table by date, postcodes, 5-digit SIC, and number of registrations
-totalRegistrations <- function(d1, d2, Tcustom, pickPostcode, pickSIC){
-  dataCustom <- Tcustom$n[which(Tcustom$postcodeDistrict %in% pickPostcode & 
-                               between(Tcustom$date, d1, d2) &
-                               Tcustom$Class %in% pickSIC
-                             )] %>%
+totalRegistrations <- function(d1, d2, Tcustom, pickPostcode, pickSIC) {
+  dataCustom <- Tcustom$n[which(Tcustom$postcodeDistrict %in% pickPostcode &
+    between(Tcustom$date, d1, d2) &
+    Tcustom$Class %in% pickSIC)] %>%
     aggregate(
-      by = list(Date = Tcustom$date[which(Tcustom$postcodeDistrict %in% pickPostcode & 
-                                             between(Tcustom$date, d1, d2) &
-                                            Tcustom$Class %in% pickSIC)],
-                "Postcode district" = Tcustom$postcodeDistrict[which(Tcustom$postcodeDistrict %in% pickPostcode & 
-                                                        between(Tcustom$date, d1, d2) &
-                                                        Tcustom$Class %in% pickSIC)],
-                Class = Tcustom$Class[which(Tcustom$postcodeDistrict %in% pickPostcode & 
-                                             between(Tcustom$date, d1, d2) &
-                                             Tcustom$Class %in% pickSIC)]
-                ),
-      sum
-    ) %>%
-    rename(Registrations = x)
-  datatable(dataCustom,
-            rownames = F, #class = "",
-            extensions = 'Buttons',
-            options = list(
-              autoWidth = T, 
-              dom = 'Bfrtip', 
-              buttons = c('pageLength', 'copy', 'print'
-                          ),  
-              pagelength = 10, 
-              lengthMenu = list(c(10, 25, 100, -1), 
-                                c('10', '25', '100','All')),
-              columnDefs = list(
-                list(
-                  className = "dt-center",
-                  targets = "_all"
-                ),
-                list(
-                  width = "40px",
-                  target = "_all"
-                )
-              )
-            )
-  )
-}
-
-# download custom data
-customDataDownload <- function(d1, d2, Tcustom, pickPostcode, pickSIC){
-  dataCustom <- Tcustom$n[which(Tcustom$postcodeDistrict %in% pickPostcode & 
-                                  between(Tcustom$date, d1, d2) &
-                                  Tcustom$Class %in% pickSIC
-  )] %>%
-    aggregate(
-      by = list(Date = Tcustom$date[which(Tcustom$postcodeDistrict %in% pickPostcode & 
-                                            between(Tcustom$date, d1, d2) &
-                                            Tcustom$Class %in% pickSIC)],
-                "Postcode district" = Tcustom$postcodeDistrict[which(Tcustom$postcodeDistrict %in% pickPostcode & 
-                                                                       between(Tcustom$date, d1, d2) &
-                                                                       Tcustom$Class %in% pickSIC)],
-                Class = Tcustom$Class[which(Tcustom$postcodeDistrict %in% pickPostcode & 
-                                              between(Tcustom$date, d1, d2) &
-                                              Tcustom$Class %in% pickSIC)]
+      by = list(
+        Date = Tcustom$date[which(Tcustom$postcodeDistrict %in% pickPostcode &
+          between(Tcustom$date, d1, d2) &
+          Tcustom$Class %in% pickSIC)],
+        "Postcode district" = Tcustom$postcodeDistrict[which(Tcustom$postcodeDistrict %in% pickPostcode &
+          between(Tcustom$date, d1, d2) &
+          Tcustom$Class %in% pickSIC)],
+        Class = Tcustom$Class[which(Tcustom$postcodeDistrict %in% pickPostcode &
+          between(Tcustom$date, d1, d2) &
+          Tcustom$Class %in% pickSIC)]
       ),
       sum
     ) %>%
     rename(Registrations = x)
-  
+  datatable(dataCustom,
+    rownames = F, # class = "",
+    extensions = "Buttons",
+    options = list(
+      autoWidth = T,
+      dom = "Bfrtip",
+      buttons = c("pageLength", "copy", "print"),
+      pagelength = 10,
+      lengthMenu = list(
+        c(10, 25, 100, -1),
+        c("10", "25", "100", "All")
+      ),
+      columnDefs = list(
+        list(
+          className = "dt-center",
+          targets = "_all"
+        ),
+        list(
+          width = "40px",
+          target = "_all"
+        )
+      )
+    )
+  )
 }
+
+# download custom data
+customDataDownload <- function(d1, d2, Tcustom, pickPostcode, pickSIC) {
+  dataCustom <- Tcustom$n[which(Tcustom$District %in% pickPostcode &
+    between(Tcustom$date, d1, d2) &
+    Tcustom$Class %in% pickSIC)] %>%
+    aggregate(
+      by = list(
+        Date = Tcustom$date[which(Tcustom$District %in% pickPostcode &
+          between(Tcustom$date, d1, d2) &
+          Tcustom$Class %in% pickSIC)],
+        "Postcode district" = Tcustom$District[which(Tcustom$District %in% pickPostcode &
+          between(Tcustom$date, d1, d2) &
+          Tcustom$Class %in% pickSIC)],
+        Class = Tcustom$Class[which(Tcustom$District %in% pickPostcode &
+          between(Tcustom$date, d1, d2) &
+          Tcustom$Class %in% pickSIC)]
+      ),
+      sum
+    ) %>%
+    rename(Registrations = x)
+}
+
+# Dissolutions functions ----
+## Value boxes----
+vboxesDis <- function(vb, d1, d2, country, Tcountry) {
+  if (vb == 1) {
+    subtitle <- paste0("Dissolutions between ", d1, " and ", d2)
+    color <- "red"
+    icon <- icon("store-slash")
+  } else if (vb == 2) {
+    subtitle <- paste("Dissolutions between first vaccine and", d2)
+    color <- "olive"
+    icon <- icon("syringe")
+  } else if (vb == 3) {
+    subtitle <- paste("Dissolutions during the most recent lockdown")
+    color <- "maroon"
+    icon <- icon("shop-lock")
+  } else if (vb == 4) {
+    subtitle <- paste("Dissolutions since easing the most recent lockdown and", d2)
+    color <- "purple"
+    icon <- icon("building-lock")
+  }
+  valueBox(
+    value = prettyNum(sum(Tcountry$n[which(between(Tcountry$date, d1, d2))]),
+    big.mark = ",", scientific = FALSE
+    ),
+    subtitle = subtitle, color = color, icon = icon
+  )
+}
+
+
+
+# Daily registrations data from plot to export as downloadable .csv
+dailyData <- function(d1, d2, country, TcountryDis, pickCountry) {
+  # Sum data for each day in relevant regions and date range.
+  raData <- TcountryDis$n[which(TcountryDis$NUTS1 %in% country &
+    between(TcountryDis$date, d1, d2))] %>%
+    aggregate(
+      by = list(date = TcountryDis$date[which(TcountryDis$NUTS1 %in% country &
+        between(TcountryDis$date, d1, d2))]),
+      sum
+    ) %>%
+    rename(n = x)
+  raData$rollingAverage <- frollmean(raData$n, n = 7)
+
+  # append raData and archive
+  data <- rbind(raData)
+}
+
+
+
+NUTSdataDis <- function(d1, d2, pickData) {
+  # Aggregate registrations by NUTS2 in selected date range from full dataset.
+  TNUTS <- dissolutions[which(between(dissolutions$date, d1, d2)), ] %>%
+    group_by(NUTS218NM) %>%
+    count()
+} # NUTS data
+
+groupRegionDataDis <- function(d1, d2, group, a) {
+  if (a == 1) {
+    df <- dissolutions[which(between(dissolutions$date, d1, d2) &
+      dissolutions$Group == group), ] %>%
+      group_by(date, NUTS1) %>%
+      count() %>%
+      ungroup() %>%
+      group_by(NUTS1) %>%
+      pivot_wider(id_cols = date, names_from = NUTS1, values_from = n)
+  } else {
+    section <- dissolutions$SectionAbb[which(dissolutions$Group == group)][1]
+    df <- dissolutions[which(between(dissolutions$date, d1, d2) &
+      dissolutions$SectionAbb == section), ] %>%
+      group_by(date, NUTS1) %>%
+      count() %>%
+      ungroup() %>%
+      group_by(NUTS1) %>%
+      pivot_wider(id_cols = date, names_from = NUTS1, values_from = n)
+  }
+  regions <- c("UKC", "UKD", "UKE", "UKF", "UKG", "UKH", "UKI", "UKJ", "UKK", "UKL", "UKM", "UKN")
+  df[setdiff(regions, names(df))] <- 0
+  df$Eng <- select(df, !(c(date, UKL, UKM, UKN))) %>% rowSums()
+  df$EngExLon <- df$Eng - df$UKI
+  df <- df %>%
+    rename(Lon = UKI, Sco = UKM, Wal = UKL, NI = UKN) %>%
+    select(c(date, Eng, EngExLon, Lon, Sco, Wal, NI)) %>%
+    pivot_longer(!date, names_to = "Region", values_to = "n") # %>%
+  df <- merge(expand.grid(date = as_date(min(df$date):max(df$date)), Region = unique(df$Region)),
+    df,
+    all = TRUE
+  )
+  df$n <- replace_na(df$n, 0)
+  df <- df %>%
+    group_by(Region) %>%
+    mutate(avg = frollmean(n, n = 7))
+  df$Region <- mapvalues(df$Region,
+    from = c("Eng", "EngExLon", "Lon", "Sco", "Wal", "NI"),
+    to = c("England", "England excl. London", "London", "Scotland", "Wales", "Northern Ireland")
+  )
+  df
+}
+
