@@ -257,7 +257,7 @@ ui <- fluidPage(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
               plotlyOutput("rollingAvgDis", height = "300px") %>% withSpinner(color = "#4C566A"),
-              downloadButton("dailyRegDisDownload", "Download data as .csv")
+              downloadButton("dailyDisDownload", "Download data as .csv")
             )
           ),
           fluidRow(
@@ -356,20 +356,28 @@ ui <- fluidPage(
         tabItem(
           tabName = "customData",
           h2("Get custom incorporation data"),
-          # h3("Select the date range, postcode(s) and SIC sectors"),
+          # h3("Select the date range, LA district(s) and SIC sectors"),
           offset = 0, style = "padding:3px;",
           fluidRow(
             column(
-              width = 5, style = "padding:2px;", height = "auto",
+              width = 3, style = "padding:2px;", height = "auto",
+              pickerInput(
+                inputId = "incORdiss",
+                label = "Incorporations or Dissolutions:",
+                choices = list("Incorporations", "Dissolutions"),
+                selected = "Incorporations",
+                multiple = FALSE,
+                options = list(size = 5)
+              )
+                   ),
+            column(
+              width = 3, style = "padding:2px;", height = "auto",
               # Select your postcode
               pickerInput(
-                inputId = "pickPostcode",
-                label = "Choose postcode district:",
+                inputId = "ladPickerCust",
+                label = "Choose Local Authority district:",
                 choices = sort(unique(register$District)),
-                # choicesOpt = list(
-                #  subtext = unique(registerPC$Group.name)[order(unique(registerPC$Group))]
-                # ),
-                selected = "AB10",
+                selected = "Canterbury",
                 multiple = TRUE,
                 options = list(
                   `actions-box` = TRUE, # build buttons for collective selection
@@ -379,7 +387,7 @@ ui <- fluidPage(
               ), # picker postcode
             ),
             column(
-              width = 5, style = "padding:2px;", height = "auto",
+              width = 3, style = "padding:2px;", height = "auto",
               # select 4-digit SIC code
               pickerInput(
                 inputId = "pickSIC",
