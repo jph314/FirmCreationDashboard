@@ -206,10 +206,8 @@ showMap <- function(data0, d1, d2, RorD) {
 
 LAdata <- function(data0, d1, d2) {
   # Aggregate registrations by NUTS2.
-  data0 <- data0[which(between(data0$date, d1, d2)),]
-  TLA <- data0$n %>% aggregate(
-    by=list(District = data0$District, Code = data0$`District Code`),
-    sum) %>% rename(n=x)
+  data0 <- setDT(data0)
+  TLA <- data0[between(date,d1,d2),list(n=sum(n)),by=list(District)]
 } # NUTS data
 
 # Sector tree map
@@ -385,6 +383,18 @@ groupPlot <- function(Tgrp, pickedSect, pickCountry, d1) {
     )
 }
 
+groupData <- function(Tgrp, pickedSect, pickCountry, d1) {
+  Tgrp <- setDT(Tgrp)
+  Tsec <- Tgrp[,list(n=sum(n)),keyby=list(date, Section, Section.name)] %>%
+    group_by(Section) %>% mutate(sum = sum_run(x=n, k=28, idx=date), avg = sum/28) %>%
+    mutate(Group=NA, Group.name=NA) %>%
+    ungroup()
+  Tsec <- setDT(Tsec)
+  Tgrp <- Tgrp[date>=d1 & Group %in% pickedSect,]
+  Tsec <- Tsec[date>=d1 & Section %in% pickedSect,]
+  rbind(Tgrp, Tsec)
+}
+
 # Regions ----
 # Select LADs
 ladSelect <- function(register, lads, d1, d2) {
@@ -455,6 +465,17 @@ districtPlot <- function(Tlad, pickedDist, d1) {
     )
 }
 
+districtData <- function(Tlad, pickedDist, d1) {
+  Tlad <- setDT(Tlad)
+  Tcty <- Tlad[,list(n=sum(n)),keyby=list(date, County, Country)] %>%
+    group_by(County) %>% mutate(sum = sum_run(x=n, k=28, idx=date), avg = sum/28, District=NA) %>%
+    ungroup()
+  Tcty <- setDT(Tcty)
+  Tlad <- Tlad[date >= d1 & District %in% pickedDist,]
+  Tcty <- Tcty[date >= d1 & County %in% pickedDist,]
+  rbind(Tlad,Tcty)
+}
+
 # Download data
 downloadData <- function(name, output) {
   downloadHandler(
@@ -468,25 +489,7 @@ downloadData <- function(name, output) {
 }
 
 # Create Table by date, postcodes, 5-digit SIC, and number of registrations
-totalRegistrations <- function(d1, d2, Tcustom, pickPostcode, pickSIC) {
-  dataCustom <- Tcustom$n[which(Tcustom$postcodeDistrict %in% pickPostcode &
-    between(Tcustom$date, d1, d2) &
-    Tcustom$Class %in% pickSIC)] %>%
-    aggregate(
-      by = list(
-        Date = Tcustom$date[which(Tcustom$postcodeDistrict %in% pickPostcode &
-          between(Tcustom$date, d1, d2) &
-          Tcustom$Class %in% pickSIC)],
-        "Postcode district" = Tcustom$postcodeDistrict[which(Tcustom$postcodeDistrict %in% pickPostcode &
-          between(Tcustom$date, d1, d2) &
-          Tcustom$Class %in% pickSIC)],
-        Class = Tcustom$Class[which(Tcustom$postcodeDistrict %in% pickPostcode &
-          between(Tcustom$date, d1, d2) &
-          Tcustom$Class %in% pickSIC)]
-      ),
-      sum
-    ) %>%
-    rename(Registrations = x)
+totalRegistrations <- function(dataCustom) {
   datatable(dataCustom,
     rownames = F, # class = "",
     extensions = "Buttons",
@@ -513,27 +516,6 @@ totalRegistrations <- function(d1, d2, Tcustom, pickPostcode, pickSIC) {
   )
 }
 
-# download custom data
-customDataDownload <- function(d1, d2, Tcustom, pickPostcode, pickSIC) {
-  dataCustom <- Tcustom$n[which(Tcustom$District %in% pickPostcode &
-    between(Tcustom$date, d1, d2) &
-    Tcustom$Class %in% pickSIC)] %>%
-    aggregate(
-      by = list(
-        Date = Tcustom$date[which(Tcustom$District %in% pickPostcode &
-          between(Tcustom$date, d1, d2) &
-          Tcustom$Class %in% pickSIC)],
-        "Postcode district" = Tcustom$District[which(Tcustom$District %in% pickPostcode &
-          between(Tcustom$date, d1, d2) &
-          Tcustom$Class %in% pickSIC)],
-        Class = Tcustom$Class[which(Tcustom$District %in% pickPostcode &
-          between(Tcustom$date, d1, d2) &
-          Tcustom$Class %in% pickSIC)]
-      ),
-      sum
-    ) %>%
-    rename(Registrations = x)
-}
 
 # Dissolutions functions ----
 ## Value boxes----

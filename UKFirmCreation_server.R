@@ -84,7 +84,9 @@ server <- function(input, output, session) {
       paste0("Daily_Registrations_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")
     },
     content = function(fname) {
-      write.csv(dailyData(input$dateAgg[1], input$dateAgg[2], countrySel(), Tcountry(), input$pickCountry), fname, row.names = F)
+      write.csv(Tcountry()[date>=(input$dateAgg[1]-7),list(n=sum(n)),keyby="date"] %>%
+                  mutate(avg = sum_run(x=n, k=7, idx=date)/7), 
+                fname, row.names = F)
     }
   )
 
@@ -172,24 +174,25 @@ server <- function(input, output, session) {
       paste0("Registrations_by_group_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")
     },
     content = function(file) {
-      write.csv(Tgrp(), file, row.names = F)
+      write.csv(groupData(Tgrp(), input$groupPicker, input$pickCountry, input$dateAgg[1]), 
+                file, row.names = F)
     }
   )
 
-  # Daily registrations per Section for selected regions, dates and distinct Sections from selected Groups.
-  Tsec <- reactive({
-    sectSelect(Tcountry(), secTable()$Section)
-  })
-
-  # Download data
-  output$sectorsDownload <- downloadHandler(
-    filename = function() {
-      paste0("Registrations_by_sector_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")
-    },
-    content = function(file) {
-      write.csv(Tsec(), file, row.names = F)
-    }
-  )
+  # # Daily registrations per Section for selected regions, dates and distinct Sections from selected Groups.
+  # Tsec <- reactive({
+  #   sectSelect(Tcountry(), secTable()$Section)
+  # })
+  # 
+  # # Download data
+  # output$sectorsDownload <- downloadHandler(
+  #   filename = function() {
+  #     paste0("Registrations_by_sector_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")
+  #   },
+  #   content = function(file) {
+  #     write.csv(Tsec(), file, row.names = F)
+  #   }
+  # )
   # Industry plots
 
   ### Regional plots ----
@@ -212,29 +215,8 @@ server <- function(input, output, session) {
       paste0("Registrations_by_district_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
     },
     content = function(file) {
-      write.csv(Tlad(), file, row.names = F)
-    }
-  )
-
-  Tcustom <- reactive(register %>%
-    group_by(date, Class, postcodeDistrict) %>%
-    count() %>%
-    as.data.table())
-
-  output$customdata <- renderDT({
-    totalRegistrations(input$dateAgg[1], input$dateAgg[2], Tcustom(), input$pickPostcode, input$pickSIC)
-  })
-
-  # Download data
-  output$customDownload <- downloadHandler(
-    filename = function() {
-      paste0("Custom_Registrations_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
-    },
-    content = function(fname) {
-      write.csv(customDataDownload(input$dateAgg[1], input$dateAgg[2], Tcustom(), input$pickPostcode, input$pickSIC),
-        fname,
-        row.names = F
-      )
+      write.csv(districtData(Tlad(), input$ladPicker, input$dateAgg[1]), 
+                file, row.names = F)
     }
   )
 
@@ -268,15 +250,14 @@ server <- function(input, output, session) {
   }) # Daily plot
 
   # Download data
-  output$dailyRegDisDownload <- downloadHandler(
+  output$dailyDisDownload <- downloadHandler(
     filename = function() {
       paste0("Daily_Dissolutions_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")
     },
     content = function(fname) {
-      write.csv(dailyData(
-        input$dateAgg[1], input$dateAgg[2], countrySel(),
-        TcountryDis, input$pickCountry
-      ), fname, row.names = F)
+      write.csv(Dcountry()[date>=(input$dateAgg[1]-7),list(n=sum(n)),keyby="date"] %>%
+                  mutate(avg = sum_run(x=n, k=7, idx=date)/7), 
+                fname, row.names = F)
     }
   )
 
@@ -292,7 +273,7 @@ server <- function(input, output, session) {
       paste0("Total_Dissolutions_byRegion_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
     },
     content = function(fname) {
-      write.csv(NUTSdataDis(input$dateAgg[1], input$dateAgg[2], input$pickData), fname, row.names = F)
+      write.csv(LAdata(dissolutions, input$dateAgg[1], input$dateAgg[2]), fname, row.names = F)
     }
   )
 
@@ -371,17 +352,8 @@ server <- function(input, output, session) {
       paste0("Dissolutions_by_group_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")
     },
     content = function(file) {
-      write.csv(TgrpDis(), file, row.names = F)
-    }
-  )
-
-  # Download data
-  output$sectorsDownloadDis <- downloadHandler(
-    filename = function() {
-      paste0("Dissolutions_by_sector_", input$dateAgg[1], "--", input$dateAgg[2], "_", input$pickCountry, ".csv")
-    },
-    content = function(file) {
-      write.csv(TsecDis(), file, row.names = F)
+      write.csv(groupData(Dgrp(), input$groupPickerDis, input$pickCountry, input$dateAgg[1]), 
+                file, row.names = F)
     }
   )
   # Industry plots
@@ -409,7 +381,36 @@ server <- function(input, output, session) {
       paste0("Dissolutions_by_district_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
     },
     content = function(file) {
-      write.csv(Dlad(), file, row.names = F)
+      write.csv(districtData(Dlad(), input$ladPickerDis, input$dateAgg[1]), 
+                file, row.names = F)
+    }
+  )
+
+  # Custom data ----
+  Tcustom <- reactive({
+    # Select either Incorporations register or Dissolutions
+    if(input$incORdiss == "Dissolutions") Tcustom <- Dcountry() else Tcustom <-  Tcountry()
+    # Aggregate data by Class and LA District
+    Tcustom[Class %in% input$pickSIC & 
+                 District %in% input$ladPickerCust & 
+                 between(date, input$dateAgg[1], input$dateAgg[2]),
+               list(n=sum(n)),keyby=list(date,Class,District)]
+  })
+  
+  output$customdata <- renderDT({
+    totalRegistrations(Tcustom())
+  })
+  
+  # Download data
+  output$customDownload <- downloadHandler(
+    filename = function() {
+      paste0("Custom_Registrations_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
+    },
+    content = function(fname) {
+      write.csv(Tcustom(),
+                fname,
+                row.names = F
+      )
     }
   )
   
