@@ -394,7 +394,8 @@ server <- function(input, output, session) {
     Tcustom[Class %in% input$pickSIC & 
                  District %in% input$ladPickerCust & 
                  between(date, input$dateAgg[1], input$dateAgg[2]),
-               list(n=sum(n)),keyby=list(date,Class,District)]
+               list(n=sum(n)),keyby=list(date,Class,District)] %>%
+      rename(!!input$incORdiss := n)
   })
   
   output$customdata <- renderDT({

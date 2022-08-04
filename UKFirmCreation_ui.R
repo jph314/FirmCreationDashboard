@@ -113,7 +113,7 @@ ui <- fluidPage(
                                 }'))),
       tags$script(HTML('
       $(document).ready(function() {
-        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> July 1, 2022 </span>\');
+        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> August 1, 2022 </span>\');
       })')),
       tabItems(
         tabItem(
@@ -216,7 +216,8 @@ ui <- fluidPage(
             pickerInput(
               inputId = "ladPicker",
               label = "Choose Local Authority District/County:",
-              choices = c(sort(unique(register$District)), sort(unique(register$County))),
+              choices = c(sort(unique(register[District!="",]$District)), 
+                          sort(unique(register[County!="",]$County))),
               selected = "Canterbury",
               multiple = TRUE,
               options = list(
@@ -327,7 +328,8 @@ ui <- fluidPage(
             pickerInput(
               inputId = "ladPickerDis",
               label = "Choose Local Authority District/County:",
-              choices = c(sort(unique(dissolutions$District)), sort(unique(dissolutions$County))),
+              choices = c(sort(unique(dissolutions[District!="",]$District)), 
+                          sort(unique(dissolutions[County!="",]$County))),
               selected = "Canterbury",
               multiple = TRUE,
               options = list(
@@ -376,7 +378,7 @@ ui <- fluidPage(
               pickerInput(
                 inputId = "ladPickerCust",
                 label = "Choose Local Authority district:",
-                choices = sort(unique(register$District)),
+                choices = sort(unique(register[District!="",]$District)),
                 selected = "Canterbury",
                 multiple = TRUE,
                 options = list(

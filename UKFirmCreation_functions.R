@@ -94,7 +94,7 @@ dailyPlot <- function(d1, d2, Tcountry, pickCountry) {
     # ) %>%
     add_segments(
       x = d1, xend = d2,
-      y = median(plotData$n), yend = median(plotData$n), name = "Median; selected period", showlegend = T
+      y = median(plotData$avg), yend = median(plotData$avg), name = "Median 7-day RA", showlegend = T
     ) %>%
     # add_segments(
     #   x = min(raData$date), xend = max(raData$date),
@@ -113,7 +113,8 @@ dailyPlot <- function(d1, d2, Tcountry, pickCountry) {
         # "between ", d1, " and ", d2,
         # "</sup>"
       ),
-      yaxis = list(title = "Number of registrations", showgrid = F, range = c(0, 1.1 * max(plotData$n))),
+      yaxis = list(title = "Number of registrations", showgrid = F, tickformat = "digit"
+                   ),
       xaxis = list(range = c(d1, d2)),
       updatemenus = list(
         list(type = "dropdown", y = 0.75, x = 1.25, active = 1, direction = "down", buttons = list(
