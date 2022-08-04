@@ -1,16 +1,33 @@
 # Welcome to our Dashboard App
-![](https://img.shields.io/badge/last%20modified-2022--01--28-informational?style=flat)
+![](https://img.shields.io/badge/last%20modified-2022--08--04-informational?style=flat)
 
 This is a **Dashboard App** linked to our [UK COVID-19 Firm Creation](www.ukfirmcreation.com) project.
 
-> Use the menu on the left to explore the aggregate and sectoral statistics analysis of firm creation in the UK.
+> Use the menu on the left to explore the aggregate, sectoral and regional analysis of business incorporations and dissolutions in the UK.
 
 ## Data
+This dashboard app uses different versions of data released by the [Companies House](https://www.gov.uk/government/organisations/companies-house).
 
-This app illustrates the latest release of the basic data of Companies House. The *beta* version includes only new registrations and active firms in the UK.
+### <i class="fa-solid fa-shop"></i> Business incorporations
+- *Latest register:* The app illustrates the latest release of the [Companies House basic data](http://download.companieshouse.gov.uk/en_output.html). This version includes the *active* business in the UK according to the latest register.
+- *Archive:* The app illustrates the new registrations of each month from the [Companies House archived data](https://webarchive.nationalarchives.gov.uk/ukgwa/*/http://download.companieshouse.gov.uk/en_output.html). See [here](https://www.ukfirmcreation.com/data/#how-to-construct) how we construct the CH archive data.
 
-## Contact 
-Reach out for comments and feedback, [here](https://www.ukfirmcreation.com/contact/).
+
+### <i class="fa-solid fa-shop-slash"></i> Business dissolutions
+Business dissolution data are collected from the [Companies House serch engine](https://find-and-update.company-information.service.gov.uk/advanced-search/). See [here](https://www.ukfirmcreation.com/data/#dissolutions) further details on how we collect the data.
+
+
+## Code
+The code of this app is available on [github](https://github.com/asavagar/FirmCreationDashboard).
+
+## Cite
+If you use this software, please cite as follows:
+
+> Galanakis, Y., Hobbs, J., & Savagar, A. (2022). UK Firm Creation: Dashboard App. Accessible on: https://asavagar.shinyapps.io/UKFirmCreation/. Code available on: https://github.com/asavagar/FirmCreationDashboard
+
+
+## <i class="fa-solid fa-circle-envelope"></i> Contact 
+Reach out for comments and feedback, [here](mailto:galanakis.gian@gmail.com).
 
 
 
