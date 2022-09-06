@@ -94,7 +94,7 @@ dailyPlot <- function(d1, d2, Tcountry, pickCountry) {
     # ) %>%
     add_segments(
       x = d1, xend = d2,
-      y = median(plotData$n), yend = median(plotData$n), name = "Median; selected period", showlegend = T
+      y = median(plotData$avg), yend = median(plotData$avg), name = "Median 7-day RA", showlegend = T
     ) %>%
     # add_segments(
     #   x = min(raData$date), xend = max(raData$date),
@@ -113,7 +113,8 @@ dailyPlot <- function(d1, d2, Tcountry, pickCountry) {
         # "between ", d1, " and ", d2,
         # "</sup>"
       ),
-      yaxis = list(title = "Number of registrations", showgrid = F, range = c(0, 1.1 * max(plotData$n))),
+      yaxis = list(title = "Number of registrations", showgrid = F, tickformat = "digit"
+                   ),
       xaxis = list(range = c(d1, d2)),
       updatemenus = list(
         list(type = "dropdown", y = 0.75, x = 1.25, active = 1, direction = "down", buttons = list(
@@ -318,22 +319,27 @@ sectSelect <- function(register, sects) {
 
 # Table data
 tableData <- function(Tgrp, pickedSect) {
-  s1 <- unique(Tgrp[which(Tgrp$Section %in% pickedSect),c(4,5)])
-  g1 <- unique(Tgrp[which(Tgrp$Group %in% pickedSect),c(2:5)])
+  s1 <- unique(Tgrp[Section %in% pickedSect,c(4,5)])
+  s1n <- Tgrp[Section %in% pickedSect,list(n=sum(n)),by=list(Section)]
+  s1 <- merge(s1,s1n,by="Section")
+  g1 <- unique(Tgrp[Group %in% pickedSect,c(2:5)])
+  g1n <- Tgrp[Group %in% pickedSect,list(n=sum(n)),by=list(Group)]
+  g1 <- merge(g1,g1n,by="Group")
   bind_rows(g1,s1)
 }
 
 # Groups table
-showTable <- function(tabledata) {
+showTable <- function(tabledata, rORd) {
   container_dt <- withTags(table(
     class = "display",
     thead(
       tr(
         th(class = "dt-center", colspan = 2, "3-digit classification"),
-        th(class = "dt-center", colspan = 2, "1-digit classification")
+        th(class = "dt-center", colspan = 2, "1-digit classification"),
+        th(class = "dt-center", colspan = 1)
       ),
       tr(
-        lapply((c("Group", "Group Name", "Section", "Section Name")), th)
+        lapply((c("Group", "Group Name", "Section", "Section Name", rORd)), th)
       )
     )
   ))
@@ -347,7 +353,7 @@ showTable <- function(tabledata) {
           targets = "_all"
         ),
         list(
-          width = "40px",
+          width = "50px",
           target = "_all"
         )
       )
@@ -406,16 +412,21 @@ ladSelect <- function(register, lads, d1, d2) {
 
 # Table data
 tableData2 <- function(Tlad, pickedDist) {
-  s1 <- unique(Tlad[which(Tlad$District %in% pickedDist),c(2:4)])
-  g1 <- unique(Tlad[which(Tlad$County %in% pickedDist),c(3,4)])
+  s1 <- unique(Tlad[District %in% pickedDist,c(2:4)])
+  s1n <- Tlad[District %in% pickedDist,list(n=sum(n)),by=list(District)]
+  s1 <- merge(s1,s1n,by="District")
+  g1 <- unique(Tlad[County %in% pickedDist,c(3,4)])
+  g1n <- Tlad[County %in% pickedDist,list(n=sum(n)),by=list(County)]
+  g1 <- merge(g1,g1n,by="County")
   bind_rows(s1,g1)
+
 }
-ladTable <- function(tabledata) {
+ladTable <- function(tabledata, rORd) {
   container_dt <- withTags(table(
     class = "display",
     thead(
       tr(
-        lapply((c("District", "County", "Country")), th)
+        lapply((c("District", "County", "Country", rORd)), th)
       )
     )
   ))
@@ -429,7 +440,7 @@ ladTable <- function(tabledata) {
                   targets = "_all"
                 ),
                 list(
-                  width = "40px",
+                  width = "50px",
                   target = "_all"
                 )
               )

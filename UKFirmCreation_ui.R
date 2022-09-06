@@ -33,6 +33,7 @@ ui <- fluidPage(
       ## to use font-awesome icons 6, I add the following line
       ## when needed in the app, I use `icon(name-of-icon)`
       tags$style("@import url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css);"),
+      tags$div(tags$style(HTML( ".dropdown-menu{z-index:10000 !important;}"))),
       sidebarMenu(
         id = "tabs",
         menuItem("Home", tabName = "home", icon = icon("home")),
@@ -113,7 +114,7 @@ ui <- fluidPage(
                                 }'))),
       tags$script(HTML('
       $(document).ready(function() {
-        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> July 1, 2022 </span>\');
+        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> September 1, 2022 </span>\');
       })')),
       tabItems(
         tabItem(
@@ -216,7 +217,8 @@ ui <- fluidPage(
             pickerInput(
               inputId = "ladPicker",
               label = "Choose Local Authority District/County:",
-              choices = c(sort(unique(register$District)), sort(unique(register$County))),
+              choices = c(sort(unique(register[District!="",]$District)), 
+                          sort(unique(register[County!="",]$County))),
               selected = "Canterbury",
               multiple = TRUE,
               options = list(
@@ -327,7 +329,8 @@ ui <- fluidPage(
             pickerInput(
               inputId = "ladPickerDis",
               label = "Choose Local Authority District/County:",
-              choices = c(sort(unique(dissolutions$District)), sort(unique(dissolutions$County))),
+              choices = c(sort(unique(dissolutions[District!="",]$District)), 
+                          sort(unique(dissolutions[County!="",]$County))),
               selected = "Canterbury",
               multiple = TRUE,
               options = list(
@@ -376,7 +379,7 @@ ui <- fluidPage(
               pickerInput(
                 inputId = "ladPickerCust",
                 label = "Choose Local Authority district:",
-                choices = sort(unique(register$District)),
+                choices = sort(unique(register[District!="",]$District)),
                 selected = "Canterbury",
                 multiple = TRUE,
                 options = list(

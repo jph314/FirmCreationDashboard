@@ -1,38 +1,38 @@
 # Set default start and end dates
 startDate <- ymd("2020-01-01")
-endDate <- ymd("2022-06-30")
+endDate <- ymd("2022-08-31")
 
 # # Read archive data ----
-# register <- readRDS("data/incorporations_archive_byMonthPostcodeSIC5.rds")
+# register <- readRDS("data/incorporations.rds")
 # register <- register %>% rename(date = IncorporationDate)
-#
+# 
 # # SIC codes ----
 # # Keep only the code from SIC.
 # register$Class <- as.integer(register$SIC5/10)
 # # Overseas companies are not supplied with SIC codes. They are therefore lost in the next step.
 # # Read SIC conversion file and merge to obtain Section, Division, Group and Class.
 # convertSIC <- fread("data/convertSIC.csv")
-# register <- merge(register, convertSIC, by="Class")
-#
+# register <- merge(register, convertSIC, by="Class", all.x = T)
+# 
 # # LA Districts ----
 # # Read postcode conversion file and merge to obtain LA District, County (in England and Wales only) and Country.
-# convertPostcodes <- fread("data/postcodes.csv") %>% rename(postcode = Postcode)
+# convertPostcodes <- fread("data/postcodes.csv")
 # register$postcode <- gsub("[ .]", "", register$postcode)
 # registerLA <- merge(register, convertPostcodes, by="postcode", all.x = T)
 # # registerLA$District[is.na(registerLA$District)] <- ""
-#
+# 
 # #Save full register if required.
 # saveRDS(registerLA, "data/registerClassLA.rds")
-#
+# 
 # # Aggregation ----
 # registerLA <- setDT(registerLA)
-# register <- registerLA[,.N,keyby=list(
+# register <- registerLA[,list(n=sum(incorporations)),keyby=list(
 #   date,Class,Group,Section,Class.name,Group.name,Division.name,Section.name,
-#   SectionAbb,District,County,Country)] %>% rename(n=N)
-# write_fst(register, "data/registerAgg.fst")
+#   SectionAbb,District,County,Country)]
+# # write_fst(register, "data/registerAgg.fst")
 
 # Load pre-aggregated data ====
-register <- read_fst("data/registerAgg.fst")
+register <- setDT(read_fst("data/registerAgg.fst"))
 
 # prepare dissolution data ----
 # dissolutions <- readRDS("data/dissolutions_snapshot.rds")
@@ -59,4 +59,4 @@ register <- read_fst("data/registerAgg.fst")
 # write_fst(dissolutions, "data/dissolutionsAgg.fst")
 
 # Load pre-aggregated data ====
-dissolutions <- read_fst("data/dissolutionsAgg.fst")
+dissolutions <- setDT(read_fst("data/dissolutionsAgg.fst"))

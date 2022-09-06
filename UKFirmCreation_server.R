@@ -107,7 +107,7 @@ server <- function(input, output, session) {
 
   Tdivision <- reactive(
     # Aggregate registrations by SIC Division in selected date range and regions from full dataset.
-    Tcountry()[date>=input$dateAgg[1],list(n=sum(n)),by=list(SectionAbb, Division.name)]
+    Tcountry()[date>=input$dateAgg[1] & !(is.na(SectionAbb)),list(n=sum(n)),by=list(SectionAbb, Division.name)]
   )
   ### Sector tree map
   sunburstDF <- reactive({
@@ -151,22 +151,22 @@ server <- function(input, output, session) {
   # Count daily registrations per SIC Group in selected date range, regions and SIC Group.
   Tgrp <- reactive({
     # groupSelect(Tcountry(), input$groupPicker)
-    Tcountry()[(Group %in% input$groupPicker | Section %in% input$groupPicker),list(n=sum(n)),
+    setDT(Tcountry()[(Group %in% input$groupPicker | Section %in% input$groupPicker) & date >= "2017-01-01",list(n=sum(n)),
                      keyby=list(date, Group, Group.name, Section, Section.name)] %>% 
       group_by(Group) %>% mutate(sum = sum_run(x=n, k=28, idx=date), avg = sum/28) %>%
-      ungroup()
+      ungroup())
     })
   # Selected Groups in a table.
   secTable <- reactive({
     tableData(Tgrp(),input$groupPicker)
   })
   output$groups <- renderDT({
-    showTable(secTable())
+    showTable(secTable(), "Registrations")
   }) # Groups table
 
   # Industry groups plot
   output$groupsPlot <- renderPlotly({
-    groupPlot(Tgrp(), input$groupPicker, input$pickCountry, input$dateAgg[1])
+    groupPlot(Tgrp(), input$groupPicker, input$pickCountry, max(input$dateAgg[1], as.Date("2017-02-01")))
   }) # Groups plot
   # Download data
   output$groupsDownload <- downloadHandler(
@@ -197,11 +197,11 @@ server <- function(input, output, session) {
 
   ### Regional plots ----
   Tlad <- reactive({
-    ladSelect(Tcountry(), input$ladPicker, input$dateAgg[1], input$dateAgg[2])})
+    setDT(ladSelect(Tcountry(), input$ladPicker, input$dateAgg[1], input$dateAgg[2]))})
   
   # Selected local authority districts in a table.
   output$districts <- renderDT({
-    ladTable(tableData2(Tlad(),input$ladPicker))
+    ladTable(tableData2(Tlad(),input$ladPicker),"Registrations")
   }) # Districts table
  
   # LA districts plot
@@ -326,10 +326,10 @@ server <- function(input, output, session) {
 
   ### Industry divisions plots ----
   Dgrp <- reactive({
-    Dcountry()[(Group %in% input$groupPickerDis | Section %in% input$groupPickerDis),list(n=sum(n)),
+    setDT(Dcountry()[(Group %in% input$groupPickerDis | Section %in% input$groupPickerDis),list(n=sum(n)),
                keyby=list(date, Group, Group.name, Section, Section.name)] %>%
       group_by(Group) %>% mutate(sum = sum_run(x=n, k=28, idx=date), avg = sum/28) %>%
-      ungroup()
+      ungroup())
   })
   # Selected Groups in a table.
   secTableDis <- reactive({
@@ -337,7 +337,7 @@ server <- function(input, output, session) {
   })
 
   output$groupsDis <- renderDT({
-    showTable(secTableDis())
+    showTable(secTableDis(), "Dissolutions")
   }) # Groups table
 
   # Industry groups plot
@@ -361,11 +361,11 @@ server <- function(input, output, session) {
   ### Regional comparison plots by division ----
   ### Regional plots ----
   Dlad <- reactive({
-    ladSelect(Dcountry(), input$ladPickerDis, input$dateAgg[1], input$dateAgg[2])})
+    setDT(ladSelect(Dcountry(), input$ladPickerDis, input$dateAgg[1], input$dateAgg[2]))})
   
   # Selected local authority districts in a table.
   output$districtsDis <- renderDT({
-    ladTable(tableData2(Dlad(),input$ladPickerDis))
+    ladTable(tableData2(Dlad(),input$ladPickerDis), "Dissolutions")
   }) # Districts table
   
   # LA districts plot
@@ -394,7 +394,8 @@ server <- function(input, output, session) {
     Tcustom[Class %in% input$pickSIC & 
                  District %in% input$ladPickerCust & 
                  between(date, input$dateAgg[1], input$dateAgg[2]),
-               list(n=sum(n)),keyby=list(date,Class,District)]
+               list(n=sum(n)),keyby=list(date,Class,District)] %>%
+      rename(!!input$incORdiss := n)
   })
   
   output$customdata <- renderDT({
