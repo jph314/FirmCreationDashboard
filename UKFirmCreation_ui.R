@@ -33,6 +33,7 @@ ui <- fluidPage(
       ## to use font-awesome icons 6, I add the following line
       ## when needed in the app, I use `icon(name-of-icon)`
       tags$style("@import url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css);"),
+      tags$div(tags$style(HTML( ".dropdown-menu{z-index:10000 !important;}"))),
       sidebarMenu(
         id = "tabs",
         menuItem("Home", tabName = "home", icon = icon("home")),
@@ -113,7 +114,7 @@ ui <- fluidPage(
                                 }'))),
       tags$script(HTML('
       $(document).ready(function() {
-        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> August 1, 2022 </span>\');
+        $("header").find("nav").append(\'<span class="myClass"> <strong>Data last update:</strong> September 1, 2022 </span>\');
       })')),
       tabItems(
         tabItem(

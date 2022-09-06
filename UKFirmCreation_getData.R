@@ -1,9 +1,9 @@
 # Set default start and end dates
 startDate <- ymd("2020-01-01")
-endDate <- ymd("2022-07-31")
+endDate <- ymd("2022-08-31")
 
 # # Read archive data ----
-# register <- readRDS("data/incorporations_archive_byMonthPostcodeSIC5.rds")
+# register <- readRDS("data/incorporations.rds")
 # register <- register %>% rename(date = IncorporationDate)
 # 
 # # SIC codes ----
@@ -12,7 +12,7 @@ endDate <- ymd("2022-07-31")
 # # Overseas companies are not supplied with SIC codes. They are therefore lost in the next step.
 # # Read SIC conversion file and merge to obtain Section, Division, Group and Class.
 # convertSIC <- fread("data/convertSIC.csv")
-# register <- merge(register, convertSIC, by="Class")
+# register <- merge(register, convertSIC, by="Class", all.x = T)
 # 
 # # LA Districts ----
 # # Read postcode conversion file and merge to obtain LA District, County (in England and Wales only) and Country.
@@ -26,10 +26,10 @@ endDate <- ymd("2022-07-31")
 # 
 # # Aggregation ----
 # registerLA <- setDT(registerLA)
-# register <- registerLA[,.N,keyby=list(
+# register <- registerLA[,list(n=sum(incorporations)),keyby=list(
 #   date,Class,Group,Section,Class.name,Group.name,Division.name,Section.name,
-#   SectionAbb,District,County,Country)] %>% rename(n=N)
-# write_fst(register, "data/registerAgg.fst")
+#   SectionAbb,District,County,Country)]
+# # write_fst(register, "data/registerAgg.fst")
 
 # Load pre-aggregated data ====
 register <- setDT(read_fst("data/registerAgg.fst"))

@@ -319,22 +319,27 @@ sectSelect <- function(register, sects) {
 
 # Table data
 tableData <- function(Tgrp, pickedSect) {
-  s1 <- unique(Tgrp[which(Tgrp$Section %in% pickedSect),c(4,5)])
-  g1 <- unique(Tgrp[which(Tgrp$Group %in% pickedSect),c(2:5)])
+  s1 <- unique(Tgrp[Section %in% pickedSect,c(4,5)])
+  s1n <- Tgrp[Section %in% pickedSect,list(n=sum(n)),by=list(Section)]
+  s1 <- merge(s1,s1n,by="Section")
+  g1 <- unique(Tgrp[Group %in% pickedSect,c(2:5)])
+  g1n <- Tgrp[Group %in% pickedSect,list(n=sum(n)),by=list(Group)]
+  g1 <- merge(g1,g1n,by="Group")
   bind_rows(g1,s1)
 }
 
 # Groups table
-showTable <- function(tabledata) {
+showTable <- function(tabledata, rORd) {
   container_dt <- withTags(table(
     class = "display",
     thead(
       tr(
         th(class = "dt-center", colspan = 2, "3-digit classification"),
-        th(class = "dt-center", colspan = 2, "1-digit classification")
+        th(class = "dt-center", colspan = 2, "1-digit classification"),
+        th(class = "dt-center", colspan = 1)
       ),
       tr(
-        lapply((c("Group", "Group Name", "Section", "Section Name")), th)
+        lapply((c("Group", "Group Name", "Section", "Section Name", rORd)), th)
       )
     )
   ))
@@ -348,7 +353,7 @@ showTable <- function(tabledata) {
           targets = "_all"
         ),
         list(
-          width = "40px",
+          width = "50px",
           target = "_all"
         )
       )
@@ -407,16 +412,21 @@ ladSelect <- function(register, lads, d1, d2) {
 
 # Table data
 tableData2 <- function(Tlad, pickedDist) {
-  s1 <- unique(Tlad[which(Tlad$District %in% pickedDist),c(2:4)])
-  g1 <- unique(Tlad[which(Tlad$County %in% pickedDist),c(3,4)])
+  s1 <- unique(Tlad[District %in% pickedDist,c(2:4)])
+  s1n <- Tlad[District %in% pickedDist,list(n=sum(n)),by=list(District)]
+  s1 <- merge(s1,s1n,by="District")
+  g1 <- unique(Tlad[County %in% pickedDist,c(3,4)])
+  g1n <- Tlad[County %in% pickedDist,list(n=sum(n)),by=list(County)]
+  g1 <- merge(g1,g1n,by="County")
   bind_rows(s1,g1)
+
 }
-ladTable <- function(tabledata) {
+ladTable <- function(tabledata, rORd) {
   container_dt <- withTags(table(
     class = "display",
     thead(
       tr(
-        lapply((c("District", "County", "Country")), th)
+        lapply((c("District", "County", "Country", rORd)), th)
       )
     )
   ))
@@ -430,7 +440,7 @@ ladTable <- function(tabledata) {
                   targets = "_all"
                 ),
                 list(
-                  width = "40px",
+                  width = "50px",
                   target = "_all"
                 )
               )
