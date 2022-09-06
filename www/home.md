@@ -1,16 +1,14 @@
 # Welcome to our Dashboard App
-![](https://img.shields.io/badge/last%20modified-2022--08--04-informational?style=flat)
+![](https://img.shields.io/badge/last%20modified-2022--09--05-informational?style=flat)
 
 This is a **Dashboard App** linked to our [UK COVID-19 Firm Creation](www.ukfirmcreation.com) project.
 
 > Use the menu on the left to explore the aggregate, sectoral and regional analysis of business incorporations and dissolutions in the UK.
 
 ## Data
-This dashboard app uses different versions of data released by the [Companies House](https://www.gov.uk/government/organisations/companies-house).
 
 ### <i class="fa-solid fa-shop"></i> Business incorporations
-- *Latest register:* The app illustrates the latest release of the [Companies House basic data](http://download.companieshouse.gov.uk/en_output.html). This version includes the *active* business in the UK according to the latest register.
-- *Archive:* The app illustrates the new registrations of each month from the [Companies House archived data](https://webarchive.nationalarchives.gov.uk/ukgwa/*/http://download.companieshouse.gov.uk/en_output.html). See [here](https://www.ukfirmcreation.com/data/#how-to-construct) how we construct the CH archive data.
+The app illustrates the new registrations of each month from the [Companies House archived data](https://webarchive.nationalarchives.gov.uk/ukgwa/*/http://download.companieshouse.gov.uk/en_output.html). See [here](https://www.ukfirmcreation.com/data/#how-to-construct) how we construct the CH archive data.
 
 
 ### <i class="fa-solid fa-shop-slash"></i> Business dissolutions
