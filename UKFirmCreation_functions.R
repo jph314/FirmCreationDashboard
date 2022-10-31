@@ -7,9 +7,9 @@ countrySelect <- function(pickCountry, register, d1, d2) {
   } else if (pickCountry == "England") {
     register[which(register$Country=="England"),]
   } else if (pickCountry == "London") {
-    register[which(register$County %in% list("Greater London", "City of London")),]
+    register[which(register$County %in% list("GREATER LONDON", "CITY OF LONDON")),]
   } else if (pickCountry == "England excl. London") {
-    register[which(register$Country=="England" & !(register$County %in% list("Greater London", "City of London"))),]
+    register[which(register$Country=="England" & !(register$County %in% list("GREATER LONDON", "CITY OF LONDON"))),]
   } else if (pickCountry == "Scotland") {
     register[which(register$Country=="Scotland"),]
   } else if (pickCountry == "Wales") {
@@ -626,3 +626,143 @@ groupRegionDataDis <- function(d1, d2, group, a) {
   df
 }
 
+# Survival plots ----
+WalesCounties <- list("CLWYD", "DYFED", "GWENT", "GWYNEDD", "MID GLAMORGAN", "POWYS", "SOUTH GLAMORGAN", "WEST GLAMORGAN")
+countrySelectSurvival <- function(pickCountry, data, d1, d2) {
+  data <- data[which(between(data$date, d1, d2)),]
+  if (pickCountry == "United Kingdom") {
+    data
+  } else if (pickCountry == "England") {
+    data[which(!(data$County %in% c(WalesCounties, "SCOTLAND", "NORTHERN IRELAND", "") | is.na(data$County))),]
+  } else if (pickCountry == "London") {
+    data[which(data$County %in% list("GREATER LONDON", "CITY OF LONDON")),]
+  } else if (pickCountry == "England excl. London") {
+    data[which(!(data$County %in% c(WalesCounties, "SCOTLAND", "NORTHERN IRELAND", "GREATER LONDON", "CITY OF LONDON", "") | is.na(data$County))),]
+  } else if (pickCountry == "Scotland") {
+    data[which(data$County=="SCOTLAND"),]
+  } else if (pickCountry == "Wales") {
+    data[which(data$County %in% WalesCounties),]
+  } else if (pickCountry == "Northern Ireland") {
+    data[which(data$County=="NORTHERN IRELAND"),]
+  }
+}
+
+# Aggregate survival plot
+survivalPlotAgg <- function(data, pickCountry) {
+  survivalAgg <- data[between(date,as.Date("2017-02-01"),max(date-182)),list(incorporations=sum(incorporations, na.rm=T), D6month=sum(D6month, na.rm=T), D12month=sum(D12month, na.rm=T), D18month=sum(D18month, na.rm=T)),keyby=list(date)]
+  survivalAgg <- survivalAgg %>% mutate(D6month28 = sum_run(D6month,k=28,idx=date)/28,
+                                        D12month28 = sum_run(D12month,k=28,idx=date)/28,
+                                        D18month28 = sum_run(D18month,k=28,idx=date)/28,
+                                        incorp28 = sum_run(incorporations,k=28,idx=date)/28)
+  plot_ly(data=survivalAgg, x=~date) %>%
+    add_trace(data=survivalAgg[between(date,min(date+28),max(date)),], 
+              y=~(D6month28/incorp28), type="scatter", mode="lines", name="<6 months") %>%
+    add_trace(data=survivalAgg[between(date,min(date+28),max(date-182)),], 
+              y=~(D12month28/incorp28), type="scatter", mode="lines", name="<12 months") %>%
+    add_trace(data=survivalAgg[between(date,min(date+28),max(date-365)),],
+              y=~(D18month28/incorp28), type="scatter", mode="lines", name="<18 months") %>%
+    layout(title = paste0("Dissolution rate of new companies in ", pickCountry),
+           yaxis = list(title = "28-day rolling average", tickformat=".1%"),
+           xaxis = list(showgrid = FALSE, title = "Incorporation date"),
+           legend = list(x = 1, y = 0.8))
+  
+}
+# Aggregate survival data
+survivalDataAgg <- function(data) {
+  survivalAgg <- data[between(date,as.Date("2017-02-01"),max(date-182)),list(incorporations=sum(incorporations, na.rm=T), D6month=sum(D6month, na.rm=T), D12month=sum(D12month, na.rm=T), D18month=sum(D18month, na.rm=T)),keyby=list(date)]
+  survivalAgg <- survivalAgg %>% mutate(D6month28 = sum_run(D6month,k=28,idx=date)/28,
+                                        D12month28 = sum_run(D12month,k=28,idx=date)/28,
+                                        D18month28 = sum_run(D18month,k=28,idx=date)/28,
+                                        incorp28 = sum_run(incorporations,k=28,idx=date)/28)
+}
+# County survival plot
+survivalPlotCty <- function(data, pickCountry, counties) {
+  data <- data[!is.na(date),]
+  survivalCty <- data[between(date,as.Date("2017-02-01"),max(date-182)) & County %in% counties,list(incorporations=sum(incorporations, na.rm=T), D6month=sum(D6month, na.rm=T), D12month=sum(D12month, na.rm=T), D18month=sum(D18month, na.rm=T)),keyby=list(date, County)]
+  survivalCty <- survivalCty %>% group_by(County) %>% mutate(D6month28 = sum_run(D6month,k=28,idx=date)/28,
+                                                             D12month28 = sum_run(D12month,k=28,idx=date)/28,
+                                                             D18month28 = sum_run(D18month,k=28,idx=date)/28,
+                                                             incorp28 = sum_run(incorporations,k=28,idx=date)/28) %>% ungroup()
+  setDT(survivalCty)
+  plot_ly(data=survivalCty, x=~date) %>%
+    add_trace(data=survivalCty[between(date,min(date+28),max(date)),],
+              y=~(D6month28/incorp28), type="scatter", mode="lines", color = ~County, colors = "viridis", visible=FALSE) %>%
+    add_trace(data=survivalCty[between(date,min(date+28),max(date-182)),],
+              y=~(D12month28/incorp28), type="scatter", mode="lines", color = ~County, colors = "viridis", visible=FALSE) %>%
+    add_trace(data=survivalCty[between(date,min(date+28),max(date-365)),],
+              y=~(D18month28/incorp28), type="scatter", mode="lines", color = ~County, colors = "viridis", visible=TRUE) %>%
+    layout(title = paste0("Dissolution rate of new companies in ", pickCountry, " by County"),
+           yaxis = list(title = "28-day rolling average", tickformat=".1%"),
+           xaxis = list(showgrid = FALSE, title = "Incorporation date"),
+           legend = list(x = 1, y = 0.8),
+           updatemenus = list(
+             list(type = "dropdown", y = 1, x = 1.4, direction = "down", buttons = list(
+               list(
+                 label = "18 month", method = "update",
+                 args = list(list(visible = c(rep(FALSE, length(counties)), rep(FALSE, length(counties)), rep(TRUE, length(counties)))))
+               ),
+               list(
+                 label = "12 month", method = "update",
+                 args = list(list(visible = c(rep(FALSE, length(counties)), rep(TRUE, length(counties)), rep(FALSE, length(counties)))))
+               ),
+               list(
+                 label = "6 month", method = "update",
+                 args = list(list(visible = c(rep(TRUE, length(counties)), rep(FALSE, length(counties)), rep(FALSE, length(counties)))))
+               )
+             ))
+           ))
+}
+# County survival data
+survivalDataCty <- function(data, counties){
+  data <- data[!is.na(date),]
+  survivalCty <- data[between(date,as.Date("2017-02-01"),max(date-182)) & County %in% counties,list(incorporations=sum(incorporations, na.rm=T), D6month=sum(D6month, na.rm=T), D12month=sum(D12month, na.rm=T), D18month=sum(D18month, na.rm=T)),keyby=list(date, County)]
+  survivalCty <- survivalCty %>% group_by(County) %>% mutate(D6month28 = sum_run(D6month,k=28,idx=date)/28,
+                                                             D12month28 = sum_run(D12month,k=28,idx=date)/28,
+                                                             D18month28 = sum_run(D18month,k=28,idx=date)/28,
+                                                             incorp28 = sum_run(incorporations,k=28,idx=date)/28) %>% ungroup()
+}
+
+# Sector survival plot
+survivalPlotSec <- function(data, pickCountry, sectors) {
+  survivalSec <- data[between(date,as.Date("2017-02-01"),max(date-182)) & Section %in% sectors,list(incorporations=sum(incorporations, na.rm=T), D6month=sum(D6month, na.rm=T), D12month=sum(D12month, na.rm=T), D18month=sum(D18month, na.rm=T)),keyby=list(date, SectionAbb)]
+  survivalSec <- survivalSec %>% group_by(SectionAbb) %>% mutate(D6month28 = sum_run(D6month,k=28,idx=date)/28,
+                                                                 D12month28 = sum_run(D12month,k=28,idx=date)/28,
+                                                                 D18month28 = sum_run(D18month,k=28,idx=date)/28,
+                                                                 incorp28 = sum_run(incorporations,k=28,idx=date)/28) %>% ungroup()
+  setDT(survivalSec)
+  plot_ly(data=survivalSec, x=~date) %>%
+    add_trace(data=survivalSec[between(date,min(date+28),max(date)),], 
+              y=~(D6month28/incorp28), type="scatter", mode="lines", color = ~SectionAbb, colors = "viridis", visible=FALSE) %>%
+    add_trace(data=survivalSec[between(date,min(date+28),max(date-182)),], 
+              y=~(D12month28/incorp28), type="scatter", mode="lines", color = ~SectionAbb, colors = "viridis", visible=FALSE) %>%
+    add_trace(data=survivalSec[between(date,min(date+28),max(date-365)),],
+              y=~(D18month28/incorp28), type="scatter", mode="lines", color = ~SectionAbb, colors = "viridis", visible=TRUE) %>%
+    layout(title = paste0("Dissolution rate of new companies in ", pickCountry, " by Sector"),
+           yaxis = list(title = "28-day rolling average", tickformat=".1%"),
+           xaxis = list(showgrid = FALSE, title = "Incorporation date"),
+           legend = list(x = 1, y = 0.8),
+           updatemenus = list(
+             list(type = "dropdown", y = 1, x = 1.4, direction = "down", buttons = list(
+               list(
+                 label = "18 month", method = "update",
+                 args = list(list(visible = c(rep(FALSE, length(sectors)), rep(FALSE, length(sectors)), rep(TRUE, length(sectors)))))
+               ),
+               list(
+                 label = "12 month", method = "update",
+                 args = list(list(visible = c(rep(FALSE, length(sectors)), rep(TRUE, length(sectors)), rep(FALSE, length(sectors)))))
+               ),
+               list(
+                 label = "6 month", method = "update",
+                 args = list(list(visible = c(rep(TRUE, length(sectors)), rep(FALSE, length(sectors)), rep(FALSE, length(sectors)))))
+               )
+             ))
+           ))
+}
+# Sector survival data
+survivalDataSec <- function(data, sectors) {
+  survivalSec <- data[between(date,as.Date("2017-02-01"),max(date-182)) & Section %in% sectors,list(incorporations=sum(incorporations, na.rm=T), D6month=sum(D6month, na.rm=T), D12month=sum(D12month, na.rm=T), D18month=sum(D18month, na.rm=T)),keyby=list(date, SectionAbb)]
+  survivalSec <- survivalSec %>% group_by(SectionAbb) %>% mutate(D6month28 = sum_run(D6month,k=28,idx=date)/28,
+                                                                 D12month28 = sum_run(D12month,k=28,idx=date)/28,
+                                                                 D18month28 = sum_run(D18month,k=28,idx=date)/28,
+                                                                 incorp28 = sum_run(incorporations,k=28,idx=date)/28) %>% ungroup()
+}

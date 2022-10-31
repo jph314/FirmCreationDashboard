@@ -339,6 +339,9 @@ server <- function(input, output, session) {
   output$groupsDis <- renderDT({
     showTable(secTableDis(), "Dissolutions")
   }) # Groups table
+  output$groups <- renderDT({
+    showTable(secTable(), "Registrations")
+  }) # Groups table
 
   # Industry groups plot
   output$groupsPlotDis <- renderPlotly({
@@ -391,11 +394,9 @@ server <- function(input, output, session) {
     # Select either Incorporations register or Dissolutions
     if(input$incORdiss == "Dissolutions") Tcustom <- Dcountry() else Tcustom <-  Tcountry()
     # Aggregate data by Class and LA District
-    Tcustom[Class %in% input$pickSIC & 
-                 District %in% input$ladPickerCust & 
-                 between(date, input$dateAgg[1], input$dateAgg[2]),
-               list(n=sum(n)),keyby=list(date,Class,District)] %>%
-      rename(!!input$incORdiss := n)
+    Tcustom <- inner_join(Tcustom, data.table(District=c(input$ladPickerCust)), by="District") %>%
+      inner_join(., data.table(Class=c(as.integer(input$pickSIC))), by="Class")
+    Tcustom[,list(date,Class,District,n)] %>% rename(!!input$incORdiss := n)
   })
   
   output$customdata <- renderDT({
@@ -412,6 +413,53 @@ server <- function(input, output, session) {
                 fname,
                 row.names = F
       )
+    }
+  )
+  
+  # Survival ----
+  SCountry <- reactive({
+    setDT(countrySelectSurvival(input$pickCountry, survival, input$dateAgg[1], input$dateAgg[2]))
+  })
+  
+  # Plots
+  output$survivalAgg <- renderPlotly({
+    survivalPlotAgg(SCountry(), input$pickCountry)
+  })
+  
+  output$survivalCty <- renderPlotly({
+    survivalPlotCty(SCountry(), input$pickCountry, input$survivalPickCty)
+  })
+
+  output$survivalSec <- renderPlotly({
+    survivalPlotSec(SCountry(), input$pickCountry, input$survivalPickSec)
+  })
+  
+  # Data
+  output$survivalAggDown <- downloadHandler(
+    filename = function() {
+      paste0("Dissolution_rate_in_", input$pickCountry, "_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
+    },
+    content = function(file) {
+      write.csv(survivalDataAgg(SCountry()), 
+                file, row.names = F)
+    }
+  )
+  output$survivalSecDown <- downloadHandler(
+    filename = function() {
+      paste0("Dissolution_rate_by_sector_in_", input$pickCountry, "_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
+    },
+    content = function(file) {
+      write.csv(survivalDataSec(SCountry(),input$survivalPickSec), 
+                file, row.names = F)
+    }
+  )
+  output$survivalCtyDown <- downloadHandler(
+    filename = function() {
+      paste0("Dissolution_rate_by_county_", input$dateAgg[1], "--", input$dateAgg[2], ".csv")
+    },
+    content = function(file) {
+      write.csv(survivalDataCty(SCountry(),input$survivalPickCty), 
+                file, row.names = F)
     }
   )
   

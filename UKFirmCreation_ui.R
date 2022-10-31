@@ -49,6 +49,7 @@ ui <- fluidPage(
           menuSubItem("Sectoral Analysis", icon = icon("industry"), tabName = "industriesDis"),
           menuSubItem("Regional Analysis", icon = icon("map-marker-alt"), tabName = "regionsDis")
         ),
+        menuItem("Survival", icon = icon("percent"), tabName = "survival"),
         menuItem("Get custom data", icon = icon("database"), tabName = "customData")
       ),
       # ### data selection: latest register vs. archive
@@ -179,10 +180,9 @@ ui <- fluidPage(
             pickerInput(
               inputId = "groupPicker",
               label = "Choose industry group(s):",
-              choices = c(sort(unique(register$Section)), sort(unique(register$Group))),
+              choices = c(listSec, listGrp),
                choicesOpt = list(
-                 subtext = c(unique(register$Section.name)[order(unique(register$Section))],
-                  unique(register$Group.name)[order(unique(register$Group))])
+                 subtext = c(listSecName, listGrpName)
                ),
               selected = list("A", 11),
               multiple = TRUE,
@@ -217,8 +217,7 @@ ui <- fluidPage(
             pickerInput(
               inputId = "ladPicker",
               label = "Choose Local Authority District/County:",
-              choices = c(sort(unique(register[District!="",]$District)), 
-                          sort(unique(register[County!="",]$County))),
+              choices = c(listDst, listCty),
               selected = "Canterbury",
               multiple = TRUE,
               options = list(
@@ -289,10 +288,9 @@ ui <- fluidPage(
             pickerInput(
               inputId = "groupPickerDis",
               label = "Choose industry group(s):",
-              choices = c(sort(unique(dissolutions$Section)), sort(unique(dissolutions$Group))),
+              choices = c(listSec, listGrp),
               choicesOpt = list(
-                subtext = c(unique(dissolutions$Section.name)[order(unique(dissolutions$Section))],
-                            unique(dissolutions$Group.name)[order(unique(dissolutions$Group))])
+                subtext = c(listSecName, listGrpName)
               ),
               selected = list("A", 11),
               multiple = TRUE,
@@ -307,7 +305,7 @@ ui <- fluidPage(
             box(
               width = NULL, align = "center", height = "auto",
               status = "primary", solidHeader = FALSE,
-              dataTableOutput("groupsDis") %>% withSpinner(color = "#4C566A")
+              DT::dataTableOutput("groupsDis") %>% withSpinner(color = "#4C566A")
             ),
             box(
               width = NULL, align = "center", height = "auto",
@@ -329,8 +327,7 @@ ui <- fluidPage(
             pickerInput(
               inputId = "ladPickerDis",
               label = "Choose Local Authority District/County:",
-              choices = c(sort(unique(dissolutions[District!="",]$District)), 
-                          sort(unique(dissolutions[County!="",]$County))),
+              choices = c(listDst, listCty),
               selected = "Canterbury",
               multiple = TRUE,
               options = list(
@@ -379,7 +376,7 @@ ui <- fluidPage(
               pickerInput(
                 inputId = "ladPickerCust",
                 label = "Choose Local Authority district:",
-                choices = sort(unique(register[District!="",]$District)),
+                choices = listDst,
                 selected = "Canterbury",
                 multiple = TRUE,
                 options = list(
@@ -417,7 +414,66 @@ ui <- fluidPage(
               downloadButton("customDownload", "Download data as .csv")
             )
           )
-        ) # custom data
+        ), # custom data
+        
+        ## Survival plots ----
+        tabItem(
+          tabName = "survival",
+          h2("Company survival/dissolution rate"),
+          offset = 0, style = "padding:3px;",
+          fluidRow(
+              box(
+                width = NULL, align = "center", height = "auto",
+                status = "primary", solidHeader = FALSE,
+                plotlyOutput("survivalAgg") %>% withSpinner(color = "#4C566A"),
+                downloadButton("survivalAggDown", "Download data as .csv")
+              )
+          ),
+          fluidRow(
+              box(
+                width = NULL, align = "center", height = "auto",
+                status = "primary", solidHeader = FALSE,
+                p("Note: Counties for England and Wales only."),
+                # Select county
+                pickerInput(
+                  inputId = "survivalPickCty",
+                  label = "Choose County(s):",
+                  choices = listCty,
+                  selected = "KENT",
+                  multiple = TRUE,
+                  options = list(
+                    `live-search` = TRUE,
+                    size = 7
+                    #             `action-box` = TRUE
+                  )),
+                plotlyOutput("survivalCty") %>% withSpinner(color = "#4C566A"),
+                downloadButton("survivalCtyDown", "Download data as .csv")
+              )
+          ),
+          fluidRow(
+              box(
+                width = NULL, align = "center", height = "auto",
+                status = "primary", solidHeader = FALSE,
+                # Select sector
+                pickerInput(
+                  inputId = "survivalPickSec",
+                  label = "Choose Sector(s):",
+                  choices = listSec,
+                  choicesOpt = list(
+                    subtext = listSecName
+                  ),
+                  selected = "A",
+                  multiple = TRUE,
+                  options = list(
+                    `live-search` = TRUE,
+                    size = 7
+                    #             `action-box` = TRUE
+                  )),
+                  plotlyOutput("survivalSec") %>% withSpinner(color = "#4C566A"),
+                  downloadButton("survivalSecDown", "Download data as .csv")
+                )
+            )
+        ) # survival
       ) # Tabs
     ) # Body
   ) # Page
