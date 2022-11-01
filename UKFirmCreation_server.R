@@ -280,7 +280,7 @@ server <- function(input, output, session) {
   # Draw sector treemap
   Ddivision <- reactive(
     # Aggregate registrations by SIC Division in selected date range and regions from full dataset.
-    Dcountry()[date>=input$dateAgg[1],list(n=sum(n)),by=list(SectionAbb, Division.name)]
+    Dcountry()[date>=input$dateAgg[1] & !is.na(SectionAbb),list(n=sum(n)),by=list(SectionAbb, Division.name)]
   )
 
   sunburstDFDis <- reactive({
